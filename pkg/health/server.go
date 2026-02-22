@@ -9,12 +9,25 @@ import (
 	"time"
 )
 
+// InjectMessage is the payload accepted by the /inject endpoint.
+type InjectMessage struct {
+	SenderID   string `json:"sender_id"`
+	ChatID     string `json:"chat_id"`
+	Content    string `json:"content"`
+	Channel    string `json:"channel"`
+	SessionKey string `json:"session_key"`
+}
+
+// InjectHandler is a callback invoked when a message is received via /inject.
+type InjectHandler func(msg InjectMessage)
+
 type Server struct {
-	server    *http.Server
-	mu        sync.RWMutex
-	ready     bool
-	checks    map[string]Check
-	startTime time.Time
+	server        *http.Server
+	mu            sync.RWMutex
+	ready         bool
+	checks        map[string]Check
+	startTime     time.Time
+	injectHandler InjectHandler
 }
 
 type Check struct {

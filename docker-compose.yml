@@ -228,6 +228,8 @@ services:
       picoclaw.persona: alex
       picoclaw.title: Research Analyst
       picoclaw.department: Intelligence
+      picoclaw.location: "Tokyo, Japan"
+      picoclaw.timezone: "Asia/Tokyo"
       picoclaw.tenant: "${TENANT_ID:-dev}"
     depends_on:
       picoclaw-traces-db:
@@ -286,6 +288,8 @@ services:
       picoclaw.persona: mia
       picoclaw.title: Content Strategist
       picoclaw.department: Creative
+      picoclaw.location: "London, UK"
+      picoclaw.timezone: "Europe/London"
       picoclaw.tenant: "${TENANT_ID:-dev}"
     depends_on:
       picoclaw-traces-db:
@@ -341,6 +345,8 @@ services:
       picoclaw.persona: ops
       picoclaw.title: Engineering Lead
       picoclaw.department: Engineering
+      picoclaw.location: "San Francisco, US"
+      picoclaw.timezone: "America/Los_Angeles"
       picoclaw.tenant: "${TENANT_ID:-dev}"
     depends_on:
       picoclaw-traces-db:
@@ -399,6 +405,8 @@ services:
       picoclaw.persona: rex
       picoclaw.title: Strategy & Review
       picoclaw.department: Planning
+      picoclaw.location: "Berlin, Germany"
+      picoclaw.timezone: "Europe/Berlin"
       picoclaw.tenant: "${TENANT_ID:-dev}"
     depends_on:
       picoclaw-traces-db:
