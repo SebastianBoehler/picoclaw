@@ -141,15 +141,27 @@ The following skills extend your capabilities. To use a skill, read its SKILL.md
 }
 
 func (cb *ContextBuilder) LoadBootstrapFiles() string {
-	bootstrapFiles := []string{
-		"AGENTS.md",
-		"SOUL.md",
-		"USER.md",
-		"IDENTITY.md",
+	var sb strings.Builder
+
+	// 1. Shared rules — loaded first so persona files can override/extend
+	sharedFiles := []string{
+		filepath.Join("shared", "SHARED_AGENTS.md"),
+		filepath.Join("shared", "USER.md"),
+	}
+	for _, filename := range sharedFiles {
+		filePath := filepath.Join(cb.workspace, filename)
+		if data, err := os.ReadFile(filePath); err == nil {
+			fmt.Fprintf(&sb, "## %s\n\n%s\n\n", filename, data)
+		}
 	}
 
-	var sb strings.Builder
-	for _, filename := range bootstrapFiles {
+	// 2. Persona-specific files
+	personaFiles := []string{
+		"AGENTS.md",
+		"IDENTITY.md",
+		"SOUL.md",
+	}
+	for _, filename := range personaFiles {
 		filePath := filepath.Join(cb.workspace, filename)
 		if data, err := os.ReadFile(filePath); err == nil {
 			fmt.Fprintf(&sb, "## %s\n\n%s\n\n", filename, data)
