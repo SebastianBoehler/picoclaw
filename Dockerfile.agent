@@ -1,0 +1,125 @@
+FROM golang:1.26.0-alpine AS builder
+
+RUN apk add --no-cache git make
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+COPY . .
+RUN make build
+
+# ─────────────────────────────────────────────
+FROM python:3.12-alpine
+
+RUN apk add --no-cache \
+    ca-certificates tzdata openssl \
+    # shell & core utils
+    bash curl wget git jq \
+    # search tools (what coding agents use)
+    ripgrep fd \
+    # text processing
+    grep sed gawk diffutils \
+    # file utils
+    findutils coreutils file \
+    # archive
+    tar gzip && \
+    pip3 install --no-cache-dir markdown==3.7 weave wandb docker reportlab python-pptx psycopg2-binary croniter pymongo redis ShopifyAPI && \
+    apk add --no-cache su-exec libreoffice font-noto
+
+# Dependencies for pdf / pptx / docx / canvas-design skills
+RUN apk add --no-cache \
+    # PDF tools: pdftotext, pdftoppm, pdfinfo (poppler), qpdf, pandoc, nodejs/npm
+    poppler-utils qpdf pandoc nodejs npm && \
+    # Python: PDF processing + PPTX extraction + image handling
+    pip3 install --no-cache-dir pypdf pdfplumber "markitdown[pptx]" Pillow && \
+    # Node: pptxgenjs (create PPTX from scratch) + docx (create DOCX from scratch)
+    npm install -g pptxgenjs docx
+
+# Browser automation — browser-use + Playwright using system Chromium (Alpine)
+RUN apk add --no-cache \
+    chromium nss freetype harfbuzz ttf-freefont font-noto-emoji dbus udev && \
+    pip3 install --no-cache-dir browser-use langchain-openai && \
+    python3 -m playwright install chromium 2>/dev/null || true
+
+# Tell Playwright to use the system Chromium instead of downloading its own
+ENV PLAYWRIGHT_BROWSERS_PATH=/usr/bin
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium-browser
+
+# Install gh CLI (GitHub CLI)
+RUN ARCH=$(uname -m) && \
+    if [ "$ARCH" = "x86_64" ]; then GH_ARCH="amd64"; \
+    elif [ "$ARCH" = "aarch64" ]; then GH_ARCH="arm64"; \
+    else GH_ARCH="amd64"; fi && \
+    GH_VERSION=$(curl -s https://api.github.com/repos/cli/cli/releases/latest | grep '"tag_name"' | sed 's/.*"v\([^"]*\)".*/\1/') && \
+    curl -fsSL "https://github.com/cli/cli/releases/download/v${GH_VERSION}/gh_${GH_VERSION}_linux_${GH_ARCH}.tar.gz" \
+    | tar -xz -C /usr/local/bin --strip-components=2 "gh_${GH_VERSION}_linux_${GH_ARCH}/bin/gh"
+
+# Copy picoclaw binary
+COPY --from=builder /src/build/picoclaw /usr/local/bin/picoclaw
+
+# Create non-root user
+RUN addgroup -g 1000 picoclaw && \
+    adduser -D -u 1000 -G picoclaw picoclaw
+
+# Entrypoint: chmod Docker socket (as root), then su-exec to picoclaw
+COPY gateway/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+USER picoclaw
+WORKDIR /home/picoclaw
+
+# Git identity and credential helper (required for commits + push inside the container)
+RUN git config --global user.email "agent@sunderlabs.com" && \
+    git config --global user.name "Picoclaw Agent" && \
+    git config --global credential.helper "/usr/local/bin/gh auth git-credential"
+
+# Bootstrap picoclaw workspace
+RUN /usr/local/bin/picoclaw onboard
+
+# Overwrite upstream identity with Sunderlabs identity
+COPY --chown=picoclaw:picoclaw workspace/IDENTITY.md /home/picoclaw/.picoclaw/workspace/IDENTITY.md
+COPY --chown=picoclaw:picoclaw workspace/SOUL.md     /home/picoclaw/.picoclaw/workspace/SOUL.md
+COPY --chown=picoclaw:picoclaw workspace/AGENT.md    /home/picoclaw/.picoclaw/workspace/AGENT.md
+COPY --chown=picoclaw:picoclaw workspace/USER.md     /home/picoclaw/.picoclaw/workspace/USER.md
+COPY --chown=picoclaw:picoclaw workspace/memory/MEMORY.md /home/picoclaw/.picoclaw/workspace/memory/MEMORY.md
+
+# Bake all custom skills into the image (mounted at runtime from picoclaw/skills/)
+COPY --chown=picoclaw:picoclaw skills /home/picoclaw/skills
+
+# Bake all persona identity files — selected at runtime via PICOCLAW_PERSONA env var
+COPY --chown=picoclaw:picoclaw cmd/picoclaw/workspace/personas /home/picoclaw/personas
+
+# Subagent workspace identity files — each named subagent gets its own IDENTITY.md
+# so ContextBuilder loads the correct persona automatically (no code changes needed)
+RUN mkdir -p /home/picoclaw/.picoclaw/workspace/agents/researcher \
+    /home/picoclaw/.picoclaw/workspace/agents/writer \
+    /home/picoclaw/.picoclaw/workspace/agents/analyst \
+    /home/picoclaw/.picoclaw/workspace/agents/lead-gen
+COPY --chown=picoclaw:picoclaw cmd/picoclaw/workspace/personas/researcher/IDENTITY.md  /home/picoclaw/.picoclaw/workspace/agents/researcher/IDENTITY.md
+COPY --chown=picoclaw:picoclaw cmd/picoclaw/workspace/personas/marketing/IDENTITY.md   /home/picoclaw/.picoclaw/workspace/agents/writer/IDENTITY.md
+COPY --chown=picoclaw:picoclaw cmd/picoclaw/workspace/personas/analyst/IDENTITY.md     /home/picoclaw/.picoclaw/workspace/agents/analyst/IDENTITY.md
+COPY --chown=picoclaw:picoclaw cmd/picoclaw/workspace/personas/lead-gen/IDENTITY.md    /home/picoclaw/.picoclaw/workspace/agents/lead-gen/IDENTITY.md
+
+# Shared gateway helpers — available in every derived image
+COPY --chown=picoclaw:picoclaw gateway/gh_auth.py /home/picoclaw/gh_auth.py
+COPY --chown=picoclaw:picoclaw gateway/agent_env.py /home/picoclaw/agent_env.py
+COPY --chown=picoclaw:picoclaw gateway/kanban.py /home/picoclaw/kanban.py
+COPY --chown=picoclaw:picoclaw gateway/gh_app_token.sh /home/picoclaw/gh_app_token.sh
+COPY --chown=picoclaw:picoclaw gateway/agent_entrypoint.sh /home/picoclaw/agent_entrypoint.sh
+COPY --chown=picoclaw:picoclaw gateway/task_runner.py /home/picoclaw/task_runner.py
+COPY --chown=picoclaw:picoclaw gateway/send_outbound_email.py /home/picoclaw/send_outbound_email.py
+COPY --chown=picoclaw:picoclaw gateway/send_telegram_file.py /home/picoclaw/send_telegram_file.py
+COPY --chown=picoclaw:picoclaw gateway/gateway_trace_writer.py /home/picoclaw/gateway_trace_writer.py
+COPY --chown=picoclaw:picoclaw gateway/router_gateway.py /home/picoclaw/router_gateway.py
+COPY --chown=picoclaw:picoclaw gateway/use_browser.py /home/picoclaw/use_browser.py
+COPY --chown=picoclaw:picoclaw gateway/sunderlabs_cli.py /home/picoclaw/sunderlabs_cli.py
+
+USER root
+
+# Browser automation script (callable via exec)
+RUN mkdir -p /app/scripts
+COPY scripts/browser_use_tool.py /app/scripts/browser_use_tool.py
+RUN chmod +x /home/picoclaw/gh_app_token.sh /home/picoclaw/agent_entrypoint.sh \
+    && chmod +x /home/picoclaw/sunderlabs_cli.py \
+    && ln -sf /home/picoclaw/sunderlabs_cli.py /usr/local/bin/sunderlabs
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["picoclaw", "agent"]

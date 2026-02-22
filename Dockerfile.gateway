@@ -1,0 +1,14 @@
+FROM picoclaw-agent
+
+USER picoclaw
+WORKDIR /home/picoclaw
+
+# Email + kanban gateway scripts (gh_auth.py, kanban.py, gh_app_token.sh inherited from base)
+COPY --chown=picoclaw:picoclaw gateway/email_gateway.py /home/picoclaw/email_gateway.py
+COPY --chown=picoclaw:picoclaw gateway/kanban_gateway.py /home/picoclaw/kanban_gateway.py
+COPY --chown=picoclaw:picoclaw gateway/send_email.py /home/picoclaw/send_email.py
+COPY --chown=picoclaw:picoclaw gateway/send_outbound_email.py /home/picoclaw/send_outbound_email.py
+
+USER root
+ENTRYPOINT ["/entrypoint.sh"]
+CMD ["python3", "/home/picoclaw/email_gateway.py"]
