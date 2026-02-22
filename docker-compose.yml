@@ -1,12 +1,37 @@
 services:
   # ─────────────────────────────────────────────
-  # PicoClaw Agent (one-shot query)
-  #   docker compose run --rm picoclaw-agent -m "Hello"
+  # Trace DB (PostgreSQL)
+  # Shared by all gateway + task containers for non-blocking trace writes.
+  # ─────────────────────────────────────────────
+  picoclaw-traces-db:
+    image: postgres:16-alpine
+    container_name: picoclaw-traces-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: picoclaw_traces
+      POSTGRES_USER: picoclaw
+      POSTGRES_PASSWORD: picoclaw
+    volumes:
+      - picoclaw-traces-db:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"  # exposed on 5433 to avoid conflict with other postgres instances
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U picoclaw -d picoclaw_traces"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # ─────────────────────────────────────────────
+  # PicoClaw Agent base image builder
+  # Build: docker compose build picoclaw-agent
+  # This image is used as the base for all gateway images AND
+  # as PICOCLAW_BASE_IMAGE for spawned task containers.
   # ─────────────────────────────────────────────
   picoclaw-agent:
     build:
       context: .
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.agent
+    image: picoclaw-agent
     container_name: picoclaw-agent
     profiles:
       - agent
@@ -42,5 +67,379 @@ services:
       - picoclaw-workspace:/home/picoclaw/.picoclaw/workspace
     command: ["gateway"]
 
+  # ─────────────────────────────────────────────
+  # PicoClaw Email Gateways — one per persona
+  # Each polls its own Gmail label and creates a kanban task.
+  # The persona picks it up via heartbeat cron and replies via send_email_reply.py.
+  # Prerequisites:
+  #   1. Add aliases in Gmail Settings → Accounts → Send mail as
+  #   2. Create Gmail filters: to:alex@sunderlabs.com → label picoclaw/alex (etc.)
+  #   3. Set GATEWAY_EMAIL + GATEWAY_APP_PASSWORD in config/email-gateway.env
+  #
+  # Start all:  docker compose --profile email-gateway up -d
+  # Start one:  docker compose up picoclaw-email-gateway-alex
+  # ─────────────────────────────────────────────
+
+  picoclaw-email-gateway-alex:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: picoclaw-email-gateway-alex
+    restart: unless-stopped
+    profiles:
+      - email-gateway
+    env_file:
+      - ./config/email-gateway.env
+    environment:
+      - MONGODB_URI=mongodb://host.docker.internal:27017/agency
+      - IMAP_FOLDER=picoclaw/alex
+      - SMTP_FROM=alex@sunderlabs.com
+      - PICOCLAW_PERSONA=alex
+      - PICOCLAW_TENANT_ID=${TENANT_ID:-dev}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  picoclaw-email-gateway-mia:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: picoclaw-email-gateway-mia
+    restart: unless-stopped
+    profiles:
+      - email-gateway
+    env_file:
+      - ./config/email-gateway.env
+    environment:
+      - MONGODB_URI=mongodb://host.docker.internal:27017/agency
+      - IMAP_FOLDER=picoclaw/mia
+      - SMTP_FROM=mia@sunderlabs.com
+      - PICOCLAW_PERSONA=mia
+      - PICOCLAW_TENANT_ID=${TENANT_ID:-dev}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  picoclaw-email-gateway-ops:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: picoclaw-email-gateway-ops
+    restart: unless-stopped
+    profiles:
+      - email-gateway
+    env_file:
+      - ./config/email-gateway.env
+    environment:
+      - MONGODB_URI=mongodb://host.docker.internal:27017/agency
+      - IMAP_FOLDER=picoclaw/ops
+      - SMTP_FROM=ops@sunderlabs.com
+      - PICOCLAW_PERSONA=ops
+      - PICOCLAW_TENANT_ID=${TENANT_ID:-dev}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  picoclaw-email-gateway-rex:
+    build:
+      context: .
+      dockerfile: Dockerfile.gateway
+    container_name: picoclaw-email-gateway-rex
+    restart: unless-stopped
+    profiles:
+      - email-gateway
+    env_file:
+      - ./config/email-gateway.env
+    environment:
+      - MONGODB_URI=mongodb://host.docker.internal:27017/agency
+      - IMAP_FOLDER=picoclaw/rex
+      - SMTP_FROM=rex@sunderlabs.com
+      - PICOCLAW_PERSONA=rex
+      - PICOCLAW_TENANT_ID=${TENANT_ID:-dev}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+
+
+
+  # ─────────────────────────────────────────────
+  # Redis — Rolling context window for router
+  # ─────────────────────────────────────────────
+  picoclaw-redis:
+    image: redis:7-alpine
+    container_name: picoclaw-redis
+    restart: unless-stopped
+    profiles:
+      - persona
+    command: ["redis-server", "--maxmemory", "64mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes:
+      - picoclaw-redis:/data
+    ports:
+      - "6380:6379"
+
+  # ─────────────────────────────────────────────
+  # Router — Group chat message router
+  # Intercepts group messages, picks one persona, re-posts with @persona prefix
+  #   docker compose --profile persona up picoclaw-router
+  # ─────────────────────────────────────────────
+  picoclaw-router:
+    image: picoclaw-agent
+    container_name: picoclaw-router
+    restart: unless-stopped
+    profiles:
+      - persona
+    command: ["python3", "/home/picoclaw/router_gateway.py"]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      - picoclaw-redis
+    environment:
+      - ROUTER_BOT_TOKEN=${TELEGRAM_TOKEN_ROUTER:-}
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - TELEGRAM_USER_ID=${TELEGRAM_USER_ID:-}
+      - ROUTER_MODEL=x-ai/grok-4-fast
+      - ROUTER_GROUP_CHAT_ID=${TELEGRAM_GROUP_CHAT_ID:-}
+      - PERSONA_HOST=host.docker.internal
+      - PORT_ALEX=18790
+      - PORT_MIA=18791
+      - PORT_OPS=18792
+      - PORT_REX=18793
+      - REDIS_URL=redis://picoclaw-redis:6379
+      - CONTEXT_WINDOW_SIZE=30
+      - CONTEXT_TTL_SECONDS=3600
+      - TELEGRAM_TOKEN_ALEX=${TELEGRAM_TOKEN_ALEX:-}
+      - TELEGRAM_TOKEN_MIA=${TELEGRAM_TOKEN_MIA:-}
+      - TELEGRAM_TOKEN_OPS=${TELEGRAM_TOKEN_OPS:-}
+      - TELEGRAM_TOKEN_REX=${TELEGRAM_TOKEN_REX:-}
+      - ROUTER_HTTP_PORT=18800
+    ports:
+      - "18800:18800"
+
+  # ─────────────────────────────────────────────
+  # Persona: Alex — Research & Intelligence
+  #   docker compose --profile persona up picoclaw-alex
+  # ─────────────────────────────────────────────
+  picoclaw-alex:
+    image: picoclaw-agent
+    container_name: picoclaw-alex
+    restart: unless-stopped
+    profiles:
+      - persona
+    command: ["python3", "/home/picoclaw/gateway_trace_writer.py"]
+    labels:
+      picoclaw.role: persona
+      picoclaw.persona: alex
+      picoclaw.title: Research Analyst
+      picoclaw.department: Intelligence
+      picoclaw.tenant: "${TENANT_ID:-dev}"
+    depends_on:
+      picoclaw-traces-db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./tenants/${TENANT_ID:-dev}/alex:/home/picoclaw/.picoclaw/workspace:rw
+      - ./tenants/${TENANT_ID:-dev}/shared:/home/picoclaw/.picoclaw/workspace/shared:rw
+      - ./tenants/${TENANT_ID:-dev}/alex/config.json:/home/picoclaw/.picoclaw/config.json:ro
+      - ./skills:/home/picoclaw/skills:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/github_app.pem:/home/picoclaw/github_app.pem:ro
+      - ./config/shopify-stores.yaml:/home/picoclaw/shopify-stores.yaml:ro
+      - ./gateway/shopify_stores.py:/home/picoclaw/shopify_stores.py:ro
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - GITHUB_APP_ID=${GITHUB_APP_ID:-}
+      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}
+      - GITHUB_APP_PRIVATE_KEY=/home/picoclaw/github_app.pem
+      - PICOCLAW_BASE_IMAGE=picoclaw-agent
+      - PICOCLAW_WORKSPACE_VOLUME=./tenants/${TENANT_ID:-dev}/alex
+      - MONGODB_URI=mongodb://host.docker.internal:27017/agency
+      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces
+      - WANDB_PROJECT=picoclaw-${TENANT_ID:-dev}
+      - TENANT_ID=${TENANT_ID:-dev}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN_ALEX:-}
+      - GATEWAY_EMAIL=sebastian@sunderlabs.com
+      - GATEWAY_APP_PASSWORD=xqirzwylzgkevoga
+      - OUTBOUND_EMAIL_WHITELIST=basti.boehler@hotmail.de,sebastian@sunderlabs.com,@sunderlabs.com
+      - SUNDERLABS_API_URL=${SUNDERLABS_API_URL:-http://host.docker.internal:3100}
+      - PICOCLAW_WEAVE_OBSERVE=1
+      - PICOCLAW_PERSONA=alex
+      - SMTP_FROM=alex@sunderlabs.com
+      - IMAP_FOLDER=picoclaw/alex
+      - ROUTER_ADVANCE_URL=http://picoclaw-router:18800/queue-advance
+      - SHOPIFY_STORE_URL=${SHOPIFY_STORE_URL:-}
+      - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN:-}
+      - SHOPIFY_API_VERSION=${SHOPIFY_API_VERSION:-2024-01}
+    ports:
+      - "18790:18790"
+
+  # ─────────────────────────────────────────────
+  # Persona: Mia — Writer & Content
+  #   docker compose --profile persona up picoclaw-mia
+  # ─────────────────────────────────────────────
+  picoclaw-mia:
+    image: picoclaw-agent
+    container_name: picoclaw-mia
+    restart: unless-stopped
+    profiles:
+      - persona
+    command: ["python3", "/home/picoclaw/gateway_trace_writer.py"]
+    labels:
+      picoclaw.role: persona
+      picoclaw.persona: mia
+      picoclaw.title: Content Strategist
+      picoclaw.department: Creative
+      picoclaw.tenant: "${TENANT_ID:-dev}"
+    depends_on:
+      picoclaw-traces-db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./tenants/${TENANT_ID:-dev}/mia:/home/picoclaw/.picoclaw/workspace:rw
+      - ./tenants/${TENANT_ID:-dev}/shared:/home/picoclaw/.picoclaw/workspace/shared:rw
+      - ./tenants/${TENANT_ID:-dev}/mia/config.json:/home/picoclaw/.picoclaw/config.json:ro
+      - ./skills:/home/picoclaw/skills:ro
+      - ./config/github_app.pem:/home/picoclaw/github_app.pem:ro
+      - ./config/shopify-stores.yaml:/home/picoclaw/shopify-stores.yaml:ro
+      - ./gateway/shopify_stores.py:/home/picoclaw/shopify_stores.py:ro
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - GITHUB_APP_ID=${GITHUB_APP_ID:-}
+      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}
+      - GITHUB_APP_PRIVATE_KEY=/home/picoclaw/github_app.pem
+      - MONGODB_URI=mongodb://host.docker.internal:27017/agency
+      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces
+      - WANDB_PROJECT=picoclaw-${TENANT_ID:-dev}
+      - TENANT_ID=${TENANT_ID:-dev}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN_MIA:-}
+      - GATEWAY_EMAIL=sebastian@sunderlabs.com
+      - GATEWAY_APP_PASSWORD=xqirzwylzgkevoga
+      - OUTBOUND_EMAIL_WHITELIST=basti.boehler@hotmail.de,sebastian@sunderlabs.com,@sunderlabs.com
+      - SUNDERLABS_API_URL=${SUNDERLABS_API_URL:-http://host.docker.internal:3100}
+      - PICOCLAW_WEAVE_OBSERVE=1
+      - PICOCLAW_PERSONA=mia
+      - SMTP_FROM=mia@sunderlabs.com
+      - IMAP_FOLDER=picoclaw/mia
+      - ROUTER_ADVANCE_URL=http://picoclaw-router:18800/queue-advance
+      - SHOPIFY_STORE_URL=${SHOPIFY_STORE_URL:-}
+      - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN:-}
+      - SHOPIFY_API_VERSION=${SHOPIFY_API_VERSION:-2024-01}
+    ports:
+      - "18791:18790"
+
+  # ─────────────────────────────────────────────
+  # Persona: Ops — Engineering & DevOps
+  #   docker compose --profile persona up picoclaw-ops
+  # ─────────────────────────────────────────────
+  picoclaw-ops:
+    image: picoclaw-agent
+    container_name: picoclaw-ops
+    restart: unless-stopped
+    profiles:
+      - persona
+    command: ["python3", "/home/picoclaw/gateway_trace_writer.py"]
+    labels:
+      picoclaw.role: persona
+      picoclaw.persona: ops
+      picoclaw.title: Engineering Lead
+      picoclaw.department: Engineering
+      picoclaw.tenant: "${TENANT_ID:-dev}"
+    depends_on:
+      picoclaw-traces-db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./tenants/${TENANT_ID:-dev}/ops:/home/picoclaw/.picoclaw/workspace:rw
+      - ./tenants/${TENANT_ID:-dev}/shared:/home/picoclaw/.picoclaw/workspace/shared:rw
+      - ./tenants/${TENANT_ID:-dev}/ops/config.json:/home/picoclaw/.picoclaw/config.json:ro
+      - ./skills:/home/picoclaw/skills:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./config/github_app.pem:/home/picoclaw/github_app.pem:ro
+      - ./config/shopify-stores.yaml:/home/picoclaw/shopify-stores.yaml:ro
+      - ./gateway/shopify_stores.py:/home/picoclaw/shopify_stores.py:ro
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - GITHUB_APP_ID=${GITHUB_APP_ID:-}
+      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}
+      - GITHUB_APP_PRIVATE_KEY=/home/picoclaw/github_app.pem
+      - PICOCLAW_BASE_IMAGE=picoclaw-agent
+      - PICOCLAW_WORKSPACE_VOLUME=./tenants/${TENANT_ID:-dev}/ops
+      - MONGODB_URI=mongodb://host.docker.internal:27017/agency
+      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces
+      - WANDB_PROJECT=picoclaw-${TENANT_ID:-dev}
+      - TENANT_ID=${TENANT_ID:-dev}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN_OPS:-}
+      - GATEWAY_EMAIL=sebastian@sunderlabs.com
+      - GATEWAY_APP_PASSWORD=xqirzwylzgkevoga
+      - OUTBOUND_EMAIL_WHITELIST=basti.boehler@hotmail.de,sebastian@sunderlabs.com,@sunderlabs.com
+      - SUNDERLABS_API_URL=${SUNDERLABS_API_URL:-http://host.docker.internal:3100}
+      - PICOCLAW_WEAVE_OBSERVE=1
+      - PICOCLAW_PERSONA=ops
+      - SMTP_FROM=ops@sunderlabs.com
+      - IMAP_FOLDER=picoclaw/ops
+      - ROUTER_ADVANCE_URL=http://picoclaw-router:18800/queue-advance
+      - SHOPIFY_STORE_URL=${SHOPIFY_STORE_URL:-}
+      - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN:-}
+      - SHOPIFY_API_VERSION=${SHOPIFY_API_VERSION:-2024-01}
+    ports:
+      - "18792:18790"
+
+  # ─────────────────────────────────────────────
+  # Persona: Rex — Critic & Planner
+  #   docker compose --profile persona up picoclaw-rex
+  # ─────────────────────────────────────────────
+  picoclaw-rex:
+    image: picoclaw-agent
+    container_name: picoclaw-rex
+    restart: unless-stopped
+    profiles:
+      - persona
+    command: ["python3", "/home/picoclaw/gateway_trace_writer.py"]
+    labels:
+      picoclaw.role: persona
+      picoclaw.persona: rex
+      picoclaw.title: Strategy & Review
+      picoclaw.department: Planning
+      picoclaw.tenant: "${TENANT_ID:-dev}"
+    depends_on:
+      picoclaw-traces-db:
+        condition: service_healthy
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./tenants/${TENANT_ID:-dev}/rex:/home/picoclaw/.picoclaw/workspace:rw
+      - ./tenants/${TENANT_ID:-dev}/shared:/home/picoclaw/.picoclaw/workspace/shared:rw
+      - ./tenants/${TENANT_ID:-dev}/rex/config.json:/home/picoclaw/.picoclaw/config.json:ro
+      - ./skills:/home/picoclaw/skills:ro
+      - ./config/github_app.pem:/home/picoclaw/github_app.pem:ro
+      - ./config/shopify-stores.yaml:/home/picoclaw/shopify-stores.yaml:ro
+      - ./gateway/shopify_stores.py:/home/picoclaw/shopify_stores.py:ro
+    environment:
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
+      - GITHUB_APP_ID=${GITHUB_APP_ID:-}
+      - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}
+      - GITHUB_APP_PRIVATE_KEY=/home/picoclaw/github_app.pem
+      - MONGODB_URI=mongodb://host.docker.internal:27017/agency
+      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces
+      - WANDB_PROJECT=picoclaw-${TENANT_ID:-dev}
+      - TENANT_ID=${TENANT_ID:-dev}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN_REX:-}
+      - GATEWAY_EMAIL=sebastian@sunderlabs.com
+      - GATEWAY_APP_PASSWORD=xqirzwylzgkevoga
+      - OUTBOUND_EMAIL_WHITELIST=basti.boehler@hotmail.de,sebastian@sunderlabs.com,@sunderlabs.com
+      - SUNDERLABS_API_URL=${SUNDERLABS_API_URL:-http://host.docker.internal:3100}
+      - PICOCLAW_WEAVE_OBSERVE=1
+      - PICOCLAW_PERSONA=rex
+      - SMTP_FROM=rex@sunderlabs.com
+      - IMAP_FOLDER=picoclaw/rex
+      - ROUTER_ADVANCE_URL=http://picoclaw-router:18800/queue-advance
+      - SHOPIFY_STORE_URL=${SHOPIFY_STORE_URL:-}
+      - SHOPIFY_ACCESS_TOKEN=${SHOPIFY_ACCESS_TOKEN:-}
+      - SHOPIFY_API_VERSION=${SHOPIFY_API_VERSION:-2024-01}
+    ports:
+      - "18793:18790"
+
+
 volumes:
   picoclaw-workspace:
+  picoclaw-traces-db:
+  picoclaw-redis:
