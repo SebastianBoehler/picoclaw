@@ -25,6 +25,12 @@ build/
 # Secrets & Config (keep templates, ignore actual secrets)
 .env
 config/config.json
+config/email-gateway.env
+config/github_app.pem
+config/shopify-stores.yaml
+tenants/dev/*/config.json
+tenants/dev/*/sessions/
+tenants/dev/*/state/
 
 # Test
 coverage.txt
