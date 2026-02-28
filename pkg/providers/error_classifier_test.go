@@ -232,6 +232,31 @@ func TestClassifyError_ImageSizeError(t *testing.T) {
 	}
 }
 
+func TestIsContextWindowError(t *testing.T) {
+	positive := []error{
+		errors.New("InvalidParameter: Total tokens of image and text exceed max message tokens"),
+		errors.New("maximum context length is 128000 tokens"),
+		errors.New("token limit exceeded"),
+	}
+	for _, err := range positive {
+		if !IsContextWindowError(err) {
+			t.Errorf("expected true for %q", err.Error())
+		}
+	}
+
+	negative := []error{
+		context.DeadlineExceeded,
+		errors.New("failed to read response: context deadline exceeded (Client.Timeout or context cancellation while reading body)"),
+		errors.New("invalid token"),
+		errors.New("connection timed out"),
+	}
+	for _, err := range negative {
+		if IsContextWindowError(err) {
+			t.Errorf("expected false for %q", err.Error())
+		}
+	}
+}
+
 func TestClassifyError_UnknownError(t *testing.T) {
 	err := errors.New("some completely random error")
 	result := ClassifyError(err, "openai", "gpt-4")

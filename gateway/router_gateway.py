@@ -31,6 +31,8 @@ import os
 import json
 import time
 import logging
+import tempfile
+import re
 import urllib.request
 import urllib.error
 
@@ -237,6 +239,22 @@ def get_updates(offset: int) -> list:
 
 # ── LLM routing ───────────────────────────────────────────────────────────────
 _SHORT_FOLLOWUPS = {"ok", "yes", "no", "do it", "continue", "go ahead", "thanks", "great", "sure", "please", "k"}
+
+
+def extract_explicit_personas(message: str) -> list[str]:
+    """
+    Detect explicit persona addressing in user text.
+    Matches standalone tokens like "alex", "@alex", "alex," etc.
+    Returns unique personas in order of first appearance.
+    """
+    found: list[str] = []
+    seen: set[str] = set()
+    for m in re.finditer(r"(?<![A-Za-z0-9_])@?(alex|mia|ops|rex)(?![A-Za-z0-9_])", message, flags=re.IGNORECASE):
+        p = m.group(1).lower()
+        if p not in seen:
+            found.append(p)
+            seen.add(p)
+    return found
 
 def pick_routing(message: str, chat_id: str, sender_id: str) -> tuple[str, list[str]]:
     """
@@ -527,8 +545,6 @@ def main() -> None:
             # ── Human user message ─────────────────────────────────────────
             if TELEGRAM_USER_ID and sender_id != str(TELEGRAM_USER_ID):
                 continue
-            if any(text.lower().startswith(f"@{p}") for p in PERSONAS):
-                continue
 
             sender_name = sender.get("username") or sender.get("first_name", "user")
             log.info(f"Routing message from @{sender_name}: {text[:80]}")
@@ -536,7 +552,12 @@ def main() -> None:
             # Clear any stale queue from a previous conversation
             queue_clear(chat_id)
 
-            executor, discussants = pick_routing(text, chat_id, sender_id)
+            mentions = extract_explicit_personas(text)
+            if len(mentions) == 1:
+                executor, discussants = mentions[0], []
+                log.info(f"Explicit persona mention detected → forcing executor: {executor}")
+            else:
+                executor, discussants = pick_routing(text, chat_id, sender_id)
             log.info(f"→ Executor: {executor} | Discussants: {discussants}")
 
             if executor == "silent":

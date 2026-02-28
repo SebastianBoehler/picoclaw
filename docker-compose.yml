@@ -222,6 +222,8 @@ services:
     restart: unless-stopped
     profiles:
       - persona
+    env_file:
+      - ./config/email-gateway.env
     command: ["python3", "/home/picoclaw/gateway_trace_writer.py"]
     labels:
       picoclaw.role: persona
@@ -245,6 +247,8 @@ services:
       - ./config/github_app.pem:/home/picoclaw/github_app.pem:ro
       - ./config/shopify-stores.yaml:/home/picoclaw/shopify-stores.yaml:ro
       - ./gateway/shopify_stores.py:/home/picoclaw/shopify_stores.py:ro
+      - ./gateway/gateway_trace_writer.py:/home/picoclaw/gateway_trace_writer.py:ro
+      - ./build/picoclaw-linux-amd64:/usr/local/bin/picoclaw:ro
     environment:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - GITHUB_APP_ID=${GITHUB_APP_ID:-}
@@ -253,12 +257,10 @@ services:
       - PICOCLAW_BASE_IMAGE=picoclaw-agent
       - PICOCLAW_WORKSPACE_VOLUME=./tenants/${TENANT_ID:-dev}/alex
       - MONGODB_URI=mongodb://host.docker.internal:27017/agency
-      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces
+      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces?sslmode=disable
       - WANDB_PROJECT=picoclaw-${TENANT_ID:-dev}
       - TENANT_ID=${TENANT_ID:-dev}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN_ALEX:-}
-      - GATEWAY_EMAIL=sebastian@sunderlabs.com
-      - GATEWAY_APP_PASSWORD=xqirzwylzgkevoga
       - OUTBOUND_EMAIL_WHITELIST=basti.boehler@hotmail.de,sebastian@sunderlabs.com,@sunderlabs.com
       - SUNDERLABS_API_URL=${SUNDERLABS_API_URL:-http://host.docker.internal:3100}
       - PICOCLAW_WEAVE_OBSERVE=1
@@ -282,6 +284,8 @@ services:
     restart: unless-stopped
     profiles:
       - persona
+    env_file:
+      - ./config/email-gateway.env
     command: ["python3", "/home/picoclaw/gateway_trace_writer.py"]
     labels:
       picoclaw.role: persona
@@ -304,18 +308,18 @@ services:
       - ./config/github_app.pem:/home/picoclaw/github_app.pem:ro
       - ./config/shopify-stores.yaml:/home/picoclaw/shopify-stores.yaml:ro
       - ./gateway/shopify_stores.py:/home/picoclaw/shopify_stores.py:ro
+      - ./gateway/gateway_trace_writer.py:/home/picoclaw/gateway_trace_writer.py:ro
+      - ./build/picoclaw-linux-amd64:/usr/local/bin/picoclaw:ro
     environment:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - GITHUB_APP_ID=${GITHUB_APP_ID:-}
       - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}
       - GITHUB_APP_PRIVATE_KEY=/home/picoclaw/github_app.pem
       - MONGODB_URI=mongodb://host.docker.internal:27017/agency
-      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces
+      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces?sslmode=disable
       - WANDB_PROJECT=picoclaw-${TENANT_ID:-dev}
       - TENANT_ID=${TENANT_ID:-dev}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN_MIA:-}
-      - GATEWAY_EMAIL=sebastian@sunderlabs.com
-      - GATEWAY_APP_PASSWORD=xqirzwylzgkevoga
       - OUTBOUND_EMAIL_WHITELIST=basti.boehler@hotmail.de,sebastian@sunderlabs.com,@sunderlabs.com
       - SUNDERLABS_API_URL=${SUNDERLABS_API_URL:-http://host.docker.internal:3100}
       - PICOCLAW_WEAVE_OBSERVE=1
@@ -339,6 +343,8 @@ services:
     restart: unless-stopped
     profiles:
       - persona
+    env_file:
+      - ./config/email-gateway.env
     command: ["python3", "/home/picoclaw/gateway_trace_writer.py"]
     labels:
       picoclaw.role: persona
@@ -362,6 +368,8 @@ services:
       - ./config/github_app.pem:/home/picoclaw/github_app.pem:ro
       - ./config/shopify-stores.yaml:/home/picoclaw/shopify-stores.yaml:ro
       - ./gateway/shopify_stores.py:/home/picoclaw/shopify_stores.py:ro
+      - ./gateway/gateway_trace_writer.py:/home/picoclaw/gateway_trace_writer.py:ro
+      - ./build/picoclaw-linux-amd64:/usr/local/bin/picoclaw:ro
     environment:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - GITHUB_APP_ID=${GITHUB_APP_ID:-}
@@ -370,12 +378,10 @@ services:
       - PICOCLAW_BASE_IMAGE=picoclaw-agent
       - PICOCLAW_WORKSPACE_VOLUME=./tenants/${TENANT_ID:-dev}/ops
       - MONGODB_URI=mongodb://host.docker.internal:27017/agency
-      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces
+      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces?sslmode=disable
       - WANDB_PROJECT=picoclaw-${TENANT_ID:-dev}
       - TENANT_ID=${TENANT_ID:-dev}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN_OPS:-}
-      - GATEWAY_EMAIL=sebastian@sunderlabs.com
-      - GATEWAY_APP_PASSWORD=xqirzwylzgkevoga
       - OUTBOUND_EMAIL_WHITELIST=basti.boehler@hotmail.de,sebastian@sunderlabs.com,@sunderlabs.com
       - SUNDERLABS_API_URL=${SUNDERLABS_API_URL:-http://host.docker.internal:3100}
       - PICOCLAW_WEAVE_OBSERVE=1
@@ -399,6 +405,8 @@ services:
     restart: unless-stopped
     profiles:
       - persona
+    env_file:
+      - ./config/email-gateway.env
     command: ["python3", "/home/picoclaw/gateway_trace_writer.py"]
     labels:
       picoclaw.role: persona
@@ -421,18 +429,18 @@ services:
       - ./config/github_app.pem:/home/picoclaw/github_app.pem:ro
       - ./config/shopify-stores.yaml:/home/picoclaw/shopify-stores.yaml:ro
       - ./gateway/shopify_stores.py:/home/picoclaw/shopify_stores.py:ro
+      - ./gateway/gateway_trace_writer.py:/home/picoclaw/gateway_trace_writer.py:ro
+      - ./build/picoclaw-linux-amd64:/usr/local/bin/picoclaw:ro
     environment:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY:-}
       - GITHUB_APP_ID=${GITHUB_APP_ID:-}
       - GITHUB_INSTALLATION_ID=${GITHUB_INSTALLATION_ID:-}
       - GITHUB_APP_PRIVATE_KEY=/home/picoclaw/github_app.pem
       - MONGODB_URI=mongodb://host.docker.internal:27017/agency
-      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces
+      - PICOCLAW_TRACES_DB_URL=postgresql://picoclaw:picoclaw@picoclaw-traces-db:5432/picoclaw_traces?sslmode=disable
       - WANDB_PROJECT=picoclaw-${TENANT_ID:-dev}
       - TENANT_ID=${TENANT_ID:-dev}
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_TOKEN_REX:-}
-      - GATEWAY_EMAIL=sebastian@sunderlabs.com
-      - GATEWAY_APP_PASSWORD=xqirzwylzgkevoga
       - OUTBOUND_EMAIL_WHITELIST=basti.boehler@hotmail.de,sebastian@sunderlabs.com,@sunderlabs.com
       - SUNDERLABS_API_URL=${SUNDERLABS_API_URL:-http://host.docker.internal:3100}
       - PICOCLAW_WEAVE_OBSERVE=1

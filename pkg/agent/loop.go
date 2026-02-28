@@ -10,17 +10,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 	"unicode/utf8"
 
+	"github.com/google/uuid"
 	"github.com/sipeed/picoclaw/pkg/bus"
 	"github.com/sipeed/picoclaw/pkg/channels"
 	"github.com/sipeed/picoclaw/pkg/config"
 	"github.com/sipeed/picoclaw/pkg/constants"
+	"github.com/sipeed/picoclaw/pkg/hooks"
 	"github.com/sipeed/picoclaw/pkg/logger"
+	"github.com/sipeed/picoclaw/pkg/observability"
 	"github.com/sipeed/picoclaw/pkg/providers"
 	"github.com/sipeed/picoclaw/pkg/routing"
 	"github.com/sipeed/picoclaw/pkg/skills"
@@ -36,8 +40,11 @@ type AgentLoop struct {
 	state          *state.Manager
 	running        atomic.Bool
 	summarizing    sync.Map
+	activeSession  sync.Map
 	fallback       *providers.FallbackChain
 	channelManager *channels.Manager
+	hookManager    *hooks.Manager
+	traceWriter    *observability.TraceWriter
 }
 
 // processOptions configures how a message is processed
@@ -50,13 +57,18 @@ type processOptions struct {
 	EnableSummary   bool   // Whether to trigger summarization
 	SendResponse    bool   // Whether to send response via bus
 	NoHistory       bool   // If true, don't load session history (for heartbeat)
+	TraceGateway    string // Optional explicit gateway label for trace row
+	TraceSender     string // Optional sender ID for trace row
+	TraceSubject    string // Optional preview/subject for trace row
 }
 
 func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers.LLMProvider) *AgentLoop {
 	registry := NewAgentRegistry(cfg, provider)
+	hookManager := hooks.NewDefaultManager()
+	traceWriter := observability.GlobalTraceWriter()
 
 	// Register shared tools to all agents
-	registerSharedTools(cfg, msgBus, registry, provider)
+	registerSharedTools(cfg, msgBus, registry, provider, hookManager, traceWriter)
 
 	// Set up shared fallback chain
 	cooldown := providers.NewCooldownTracker()
@@ -76,6 +88,8 @@ func NewAgentLoop(cfg *config.Config, msgBus *bus.MessageBus, provider providers
 		state:       stateManager,
 		summarizing: sync.Map{},
 		fallback:    fallbackChain,
+		hookManager: hookManager,
+		traceWriter: traceWriter,
 	}
 }
 
@@ -85,12 +99,17 @@ func registerSharedTools(
 	msgBus *bus.MessageBus,
 	registry *AgentRegistry,
 	provider providers.LLMProvider,
+	hookManager *hooks.Manager,
+	traceWriter *observability.TraceWriter,
 ) {
 	for _, agentID := range registry.ListAgentIDs() {
 		agent, ok := registry.GetAgent(agentID)
 		if !ok {
 			continue
 		}
+
+		agent.Tools.SetHookManager(hookManager)
+		agent.Tools.SetTraceWriter(traceWriter)
 
 		// Web tools
 		if searchTool := tools.NewWebSearchTool(tools.WebSearchToolOptions{
@@ -118,11 +137,25 @@ func registerSharedTools(
 
 		// Message tool
 		messageTool := tools.NewMessageTool()
-		messageTool.SetSendCallback(func(channel, chatID, content string) error {
+		messageTool.SetSendCallback(func(ctx context.Context, channel, chatID, content string) error {
+			out := hooks.OutboundMessage{Channel: channel, ChatID: chatID, Content: content}
+			if hookManager != nil {
+				updated, err := hookManager.RunBeforeOutbound(ctx, out)
+				if err != nil {
+					logger.WarnCF("hooks", "Outbound blocked",
+						map[string]any{
+							"channel": out.Channel,
+							"chat_id": out.ChatID,
+							"error":   err.Error(),
+						})
+					return err
+				}
+				out = updated
+			}
 			msgBus.PublishOutbound(bus.OutboundMessage{
-				Channel: channel,
-				ChatID:  chatID,
-				Content: content,
+				Channel: out.Channel,
+				ChatID:  out.ChatID,
+				Content: out.Content,
 			})
 			return nil
 		})
@@ -188,11 +221,7 @@ func (al *AgentLoop) Run(ctx context.Context) error {
 				}
 
 				if !alreadySent {
-					al.bus.PublishOutbound(bus.OutboundMessage{
-						Channel: msg.Channel,
-						ChatID:  msg.ChatID,
-						Content: response,
-					})
+					al.publishOutbound(ctx, msg.Channel, msg.ChatID, response)
 				}
 			}
 		}
@@ -267,6 +296,9 @@ func (al *AgentLoop) ProcessHeartbeat(ctx context.Context, content, channel, cha
 		EnableSummary:   false,
 		SendResponse:    false,
 		NoHistory:       true, // Don't load session history for heartbeat
+		TraceGateway:    channel,
+		TraceSender:     "heartbeat",
+		TraceSubject:    utils.Truncate(content, 200),
 	})
 }
 
@@ -332,6 +364,9 @@ func (al *AgentLoop) processMessage(ctx context.Context, msg bus.InboundMessage)
 		DefaultResponse: "I've completed processing but have no response to give.",
 		EnableSummary:   true,
 		SendResponse:    false,
+		TraceGateway:    msg.Channel,
+		TraceSender:     msg.SenderID,
+		TraceSubject:    utils.Truncate(msg.Content, 200),
 	})
 }
 
@@ -388,11 +423,31 @@ func (al *AgentLoop) processSystemMessage(ctx context.Context, msg bus.InboundMe
 		DefaultResponse: "Background task completed.",
 		EnableSummary:   false,
 		SendResponse:    true,
+		TraceGateway:    originChannel,
+		TraceSender:     msg.SenderID,
+		TraceSubject:    utils.Truncate(msg.Content, 200),
 	})
 }
 
 // runAgentLoop is the core message processing logic.
 func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opts processOptions) (string, error) {
+	var runErr error
+	traceRun := al.buildTraceRun(opts)
+	if traceRun != nil && al.traceWriter != nil && al.traceWriter.Enabled() {
+		ctx = observability.WithRun(ctx, traceRun)
+		defer func() {
+			exitCode := 0
+			if runErr != nil {
+				exitCode = 1
+			}
+			al.traceWriter.FinishRun(traceRun, exitCode)
+		}()
+	}
+
+	if !opts.NoHistory {
+		al.setActiveSession(agent.ID, opts.SessionKey)
+	}
+
 	// 0. Record last channel for heartbeat notifications (skip internal channels)
 	if opts.Channel != "" && opts.ChatID != "" {
 		// Don't record internal channels (cli, system, subagent)
@@ -429,6 +484,7 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 	// 4. Run LLM iteration loop
 	finalContent, iteration, err := al.runLLMIteration(ctx, agent, messages, opts)
 	if err != nil {
+		runErr = err
 		return "", err
 	}
 
@@ -451,11 +507,7 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 
 	// 8. Optional: send response via bus
 	if opts.SendResponse {
-		al.bus.PublishOutbound(bus.OutboundMessage{
-			Channel: opts.Channel,
-			ChatID:  opts.ChatID,
-			Content: finalContent,
-		})
+		al.publishOutbound(ctx, opts.Channel, opts.ChatID, finalContent)
 	}
 
 	// 9. Log response
@@ -468,6 +520,7 @@ func (al *AgentLoop) runAgentLoop(ctx context.Context, agent *AgentInstance, opt
 			"final_length": len(finalContent),
 		})
 
+	runErr = nil
 	return finalContent, nil
 }
 
@@ -483,6 +536,8 @@ func (al *AgentLoop) runLLMIteration(
 
 	for iteration < agent.MaxIterations {
 		iteration++
+		llmCtx := observability.WithIteration(ctx, iteration)
+		al.emitContextEvent(llmCtx, agent, opts, messages, iteration, "pre_llm", nil, "")
 
 		logger.DebugCF("agent", "LLM iteration",
 			map[string]any{
@@ -548,29 +603,26 @@ func (al *AgentLoop) runLLMIteration(
 		// Retry loop for context/token errors
 		maxRetries := 2
 		for retry := 0; retry <= maxRetries; retry++ {
+			llmStarted := time.Now()
 			response, err = callLLM()
+			llmDurationMS := time.Since(llmStarted).Milliseconds()
+			al.emitLLMEvent(llmCtx, agent, iteration, llmDurationMS, response, err)
 			if err == nil {
+				al.emitContextEvent(llmCtx, agent, opts, messages, iteration, "post_llm", response, "")
 				break
 			}
 
-			errMsg := strings.ToLower(err.Error())
-			isContextError := strings.Contains(errMsg, "token") ||
-				strings.Contains(errMsg, "context") ||
-				strings.Contains(errMsg, "invalidparameter") ||
-				strings.Contains(errMsg, "length")
+			isContextError := providers.IsContextWindowError(err)
 
 			if isContextError && retry < maxRetries {
 				logger.WarnCF("agent", "Context window error detected, attempting compression", map[string]any{
 					"error": err.Error(),
 					"retry": retry,
 				})
+				al.emitContextEvent(llmCtx, agent, opts, messages, iteration, "context_retry", nil, err.Error())
 
 				if retry == 0 && !constants.IsInternalChannel(opts.Channel) {
-					al.bus.PublishOutbound(bus.OutboundMessage{
-						Channel: opts.Channel,
-						ChatID:  opts.ChatID,
-						Content: "Context window exceeded. Compressing history and retrying...",
-					})
+					al.publishOutbound(ctx, opts.Channel, opts.ChatID, "Context window exceeded. Compressing history and retrying...")
 				}
 
 				al.forceCompression(agent, opts.SessionKey)
@@ -686,7 +738,7 @@ func (al *AgentLoop) runLLMIteration(
 			}
 
 			toolResult := agent.Tools.ExecuteWithContext(
-				ctx,
+				llmCtx,
 				tc.Name,
 				tc.Arguments,
 				opts.Channel,
@@ -696,11 +748,7 @@ func (al *AgentLoop) runLLMIteration(
 
 			// Send ForUser content to user immediately if not Silent
 			if !toolResult.Silent && toolResult.ForUser != "" && opts.SendResponse {
-				al.bus.PublishOutbound(bus.OutboundMessage{
-					Channel: opts.Channel,
-					ChatID:  opts.ChatID,
-					Content: toolResult.ForUser,
-				})
+				al.publishOutbound(ctx, opts.Channel, opts.ChatID, toolResult.ForUser)
 				logger.DebugCF("agent", "Sent tool result to user",
 					map[string]any{
 						"tool":        tc.Name,
@@ -727,6 +775,188 @@ func (al *AgentLoop) runLLMIteration(
 	}
 
 	return finalContent, iteration, nil
+}
+
+func (al *AgentLoop) publishOutbound(ctx context.Context, channel, chatID, content string) {
+	msg := hooks.OutboundMessage{
+		Channel: channel,
+		ChatID:  chatID,
+		Content: content,
+	}
+	if al.hookManager != nil {
+		updated, err := al.hookManager.RunBeforeOutbound(ctx, msg)
+		if err != nil {
+			logger.WarnCF("hooks", "Outbound message blocked", map[string]any{
+				"channel": channel,
+				"chat_id": chatID,
+				"error":   err.Error(),
+			})
+			if run, ok := observability.RunFromContext(ctx); ok && al.traceWriter != nil {
+				al.traceWriter.RecordRunEvent(run, "outbound_blocked", map[string]any{
+					"channel": channel,
+					"chat_id": chatID,
+				}, "error", 0, err.Error())
+			}
+			return
+		}
+		msg = updated
+	}
+	al.bus.PublishOutbound(bus.OutboundMessage{
+		Channel: msg.Channel,
+		ChatID:  msg.ChatID,
+		Content: msg.Content,
+	})
+}
+
+func (al *AgentLoop) buildTraceRun(opts processOptions) *observability.Run {
+	if al.traceWriter == nil || !al.traceWriter.Enabled() {
+		return nil
+	}
+	runID := strings.TrimSpace(os.Getenv("PICOCLAW_TASK_ID"))
+	if runID == "" {
+		runID = strings.ReplaceAll(uuid.NewString(), "-", "")[:12]
+	}
+
+	gateway := strings.TrimSpace(opts.TraceGateway)
+	if gateway == "" {
+		gateway = strings.TrimSpace(opts.Channel)
+	}
+	if envGateway := strings.TrimSpace(os.Getenv("PICOCLAW_TRACE_GATEWAY")); envGateway != "" {
+		gateway = envGateway
+	}
+	if gateway == "" {
+		gateway = "cli"
+	}
+
+	sender := strings.TrimSpace(opts.TraceSender)
+	if sender == "" {
+		sender = strings.TrimSpace(os.Getenv("PICOCLAW_TRACE_SENDER"))
+	}
+	if sender == "" {
+		sender = "unknown"
+	}
+
+	subject := strings.TrimSpace(opts.TraceSubject)
+	if subject == "" {
+		subject = strings.TrimSpace(os.Getenv("PICOCLAW_TRACE_SUBJECT"))
+	}
+	if subject == "" {
+		subject = utils.Truncate(opts.UserMessage, 200)
+	}
+
+	persona := strings.TrimSpace(os.Getenv("PICOCLAW_PERSONA"))
+
+	return &observability.Run{
+		ID:         runID,
+		Gateway:    gateway,
+		Sender:     sender,
+		Subject:    subject,
+		SessionKey: opts.SessionKey,
+		Persona:    persona,
+		StartedAt:  float64(time.Now().UnixMilli()) / 1000.0,
+	}
+}
+
+func (al *AgentLoop) emitLLMEvent(
+	ctx context.Context,
+	agent *AgentInstance,
+	iteration int,
+	durationMS int64,
+	response *providers.LLMResponse,
+	callErr error,
+) {
+	if al.traceWriter == nil {
+		return
+	}
+	run, ok := observability.RunFromContext(ctx)
+	if !ok {
+		return
+	}
+	payload := map[string]any{
+		"agent_id":    agent.ID,
+		"iteration":   iteration,
+		"model":       agent.Model,
+		"tool_calls":  0,
+		"has_content": false,
+	}
+	status := "ok"
+	errText := ""
+	if callErr != nil {
+		status = "error"
+		errText = callErr.Error()
+	} else if response != nil {
+		payload["tool_calls"] = len(response.ToolCalls)
+		payload["has_content"] = strings.TrimSpace(response.Content) != ""
+		if response.Usage != nil {
+			payload["prompt_tokens"] = response.Usage.PromptTokens
+			payload["completion_tokens"] = response.Usage.CompletionTokens
+			payload["total_tokens"] = response.Usage.TotalTokens
+		}
+	}
+	al.traceWriter.RecordRunEvent(run, "llm_call", payload, status, durationMS, errText)
+}
+
+func (al *AgentLoop) emitContextEvent(
+	ctx context.Context,
+	agent *AgentInstance,
+	opts processOptions,
+	messages []providers.Message,
+	iteration int,
+	phase string,
+	response *providers.LLMResponse,
+	errText string,
+) {
+	if al.traceWriter == nil {
+		return
+	}
+	run, ok := observability.RunFromContext(ctx)
+	if !ok {
+		return
+	}
+	contextChars := 0
+	previewMessages := make([]map[string]any, 0, len(messages))
+	for i, m := range messages {
+		chars := utf8.RuneCountInString(m.Content)
+		contextChars += chars
+		if chars == 0 {
+			continue
+		}
+		runes := []rune(m.Content)
+		preview := string(runes)
+		if len(runes) > contextSnapshotPreviewLen {
+			preview = string(runes[:contextSnapshotPreviewLen]) + "…"
+		}
+		previewMessages = append(previewMessages, map[string]any{
+			"index":   i,
+			"role":    m.Role,
+			"chars":   chars,
+			"preview": preview,
+		})
+	}
+
+	payload := map[string]any{
+		"session_key":             opts.SessionKey,
+		"agent_id":                agent.ID,
+		"iteration":               iteration,
+		"phase":                   phase,
+		"model":                   agent.Model,
+		"max_response_tokens":     agent.MaxTokens,
+		"max_context_tokens":      agent.ContextWindow,
+		"messages_count":          len(messages),
+		"context_chars":           contextChars,
+		"estimated_prompt_tokens": contextChars * 2 / 5,
+		"omitted_messages":        0,
+		"messages":                previewMessages,
+	}
+	if response != nil && response.Usage != nil {
+		payload["actual_prompt_tokens"] = response.Usage.PromptTokens
+		payload["completion_tokens"] = response.Usage.CompletionTokens
+		payload["total_tokens"] = response.Usage.TotalTokens
+	}
+	if strings.TrimSpace(errText) != "" {
+		payload["error"] = errText
+	}
+	al.traceWriter.RecordContextEvent(run, payload, iteration)
 }
 
 // updateToolContexts updates the context for tools that need channel/chatID info.
@@ -761,11 +991,7 @@ func (al *AgentLoop) maybeSummarize(agent *AgentInstance, sessionKey, channel, c
 			go func() {
 				defer al.summarizing.Delete(summarizeKey)
 				if !constants.IsInternalChannel(channel) {
-					al.bus.PublishOutbound(bus.OutboundMessage{
-						Channel: channel,
-						ChatID:  chatID,
-						Content: "Memory threshold reached. Optimizing conversation history...",
-					})
+					al.publishOutbound(context.Background(), channel, chatID, "Memory threshold reached. Optimizing conversation history...")
 				}
 				al.summarizeSession(agent, sessionKey)
 			}()
@@ -824,6 +1050,113 @@ func (al *AgentLoop) forceCompression(agent *AgentInstance, sessionKey string) {
 		"dropped_msgs": droppedCount,
 		"new_count":    len(newHistory),
 	})
+}
+
+// GetSystemPrompt returns the current system prompt for the default agent.
+func (al *AgentLoop) GetSystemPrompt() string {
+	agent := al.registry.GetDefaultAgent()
+	if agent == nil {
+		return ""
+	}
+	return agent.ContextBuilder.BuildSystemPrompt()
+}
+
+// ContextSnapshotMessage is a single message entry in a ContextSnapshot.
+type ContextSnapshotMessage struct {
+	Index   int    `json:"index"`
+	Role    string `json:"role"`
+	Chars   int    `json:"chars"`
+	Preview string `json:"preview"`
+}
+
+// ContextSnapshot holds live context window stats for the default agent.
+type ContextSnapshot struct {
+	SessionKey            string                   `json:"session_key"`
+	Model                 string                   `json:"model"`
+	MaxContextTokens      int                      `json:"max_context_tokens"`
+	EstimatedPromptTokens int                      `json:"estimated_prompt_tokens"`
+	MessagesCount         int                      `json:"messages_count"`
+	ContextChars          int                      `json:"context_chars"`
+	Messages              []ContextSnapshotMessage `json:"messages"`
+}
+
+const contextSnapshotPreviewLen = 120
+
+// GetContextSnapshot returns a live context window snapshot for the default agent.
+// It builds the current system prompt + session history to estimate token usage.
+func (al *AgentLoop) GetContextSnapshot() ContextSnapshot {
+	agent := al.registry.GetDefaultAgent()
+	if agent == nil {
+		return ContextSnapshot{}
+	}
+
+	// Build the full message list as it would be sent to the LLM
+	sessionKey := al.getActiveSession(agent.ID)
+	if strings.TrimSpace(sessionKey) == "" {
+		sessionKey = routing.BuildAgentMainSessionKey(agent.ID)
+	}
+	history := agent.Sessions.GetHistory(sessionKey)
+	summary := agent.Sessions.GetSummary(sessionKey)
+	messages := agent.ContextBuilder.BuildMessages(history, summary, "", nil, "", "")
+
+	totalChars := 0
+	msgPreviews := make([]ContextSnapshotMessage, 0, len(messages))
+	for i, m := range messages {
+		chars := utf8.RuneCountInString(m.Content)
+		totalChars += chars
+
+		runes := []rune(m.Content)
+		preview := string(runes)
+		if len(runes) > contextSnapshotPreviewLen {
+			preview = string(runes[:contextSnapshotPreviewLen]) + "…"
+		}
+		// Skip empty messages (e.g. tool-result placeholders with no content)
+		if len(runes) == 0 {
+			continue
+		}
+		msgPreviews = append(msgPreviews, ContextSnapshotMessage{
+			Index:   i,
+			Role:    m.Role,
+			Chars:   chars,
+			Preview: preview,
+		})
+	}
+	estimatedTokens := totalChars * 2 / 5
+
+	return ContextSnapshot{
+		SessionKey:            sessionKey,
+		Model:                 agent.Model,
+		MaxContextTokens:      agent.ContextWindow,
+		EstimatedPromptTokens: estimatedTokens,
+		MessagesCount:         len(messages),
+		ContextChars:          totalChars,
+		Messages:              msgPreviews,
+	}
+}
+
+func (al *AgentLoop) setActiveSession(agentID, sessionKey string) {
+	aid := strings.TrimSpace(agentID)
+	sid := strings.TrimSpace(sessionKey)
+	if aid == "" || sid == "" {
+		return
+	}
+	al.activeSession.Store(aid, sid)
+}
+
+func (al *AgentLoop) getActiveSession(agentID string) string {
+	aid := strings.TrimSpace(agentID)
+	if aid == "" {
+		return ""
+	}
+	raw, ok := al.activeSession.Load(aid)
+	if !ok {
+		return ""
+	}
+	sessionKey, ok := raw.(string)
+	if !ok {
+		return ""
+	}
+	return strings.TrimSpace(sessionKey)
 }
 
 // GetStartupInfo returns information about loaded tools and skills for logging.

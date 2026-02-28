@@ -6,19 +6,35 @@ import (
 	"sync"
 	"time"
 
+	"github.com/sipeed/picoclaw/pkg/hooks"
 	"github.com/sipeed/picoclaw/pkg/logger"
+	"github.com/sipeed/picoclaw/pkg/observability"
 	"github.com/sipeed/picoclaw/pkg/providers"
 )
 
 type ToolRegistry struct {
-	tools map[string]Tool
-	mu    sync.RWMutex
+	tools       map[string]Tool
+	hookManager *hooks.Manager
+	traceWriter *observability.TraceWriter
+	mu          sync.RWMutex
 }
 
 func NewToolRegistry() *ToolRegistry {
 	return &ToolRegistry{
 		tools: make(map[string]Tool),
 	}
+}
+
+func (r *ToolRegistry) SetHookManager(hm *hooks.Manager) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.hookManager = hm
+}
+
+func (r *ToolRegistry) SetTraceWriter(tw *observability.TraceWriter) {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	r.traceWriter = tw
 }
 
 func (r *ToolRegistry) Register(tool Tool) {
@@ -48,6 +64,33 @@ func (r *ToolRegistry) ExecuteWithContext(
 	channel, chatID string,
 	asyncCallback AsyncCallback,
 ) *ToolResult {
+	iteration := observability.IterationFromContext(ctx)
+	invocation := hooks.ToolInvocation{
+		Name:    name,
+		Args:    args,
+		Channel: channel,
+		ChatID:  chatID,
+	}
+
+	r.mu.RLock()
+	hookManager := r.hookManager
+	traceWriter := r.traceWriter
+	r.mu.RUnlock()
+
+	if hookManager != nil {
+		updated, err := hookManager.RunBeforeTool(ctx, invocation)
+		if err != nil {
+			logger.WarnCF("tool", "Tool blocked by hook",
+				map[string]any{
+					"tool":  name,
+					"error": err.Error(),
+				})
+			return ErrorResult("Tool blocked by hook policy").WithError(err)
+		}
+		invocation = updated
+		args = updated.Args
+	}
+
 	logger.InfoCF("tool", "Tool execution started",
 		map[string]any{
 			"tool": name,
@@ -80,28 +123,55 @@ func (r *ToolRegistry) ExecuteWithContext(
 	start := time.Now()
 	result := tool.Execute(ctx, args)
 	duration := time.Since(start)
+	durationMS := duration.Milliseconds()
 
 	// Log based on result type
 	if result.IsError {
 		logger.ErrorCF("tool", "Tool execution failed",
 			map[string]any{
 				"tool":     name,
-				"duration": duration.Milliseconds(),
+				"duration": durationMS,
 				"error":    result.ForLLM,
 			})
 	} else if result.Async {
 		logger.InfoCF("tool", "Tool started (async)",
 			map[string]any{
 				"tool":     name,
-				"duration": duration.Milliseconds(),
+				"duration": durationMS,
 			})
 	} else {
 		logger.InfoCF("tool", "Tool execution completed",
 			map[string]any{
 				"tool":          name,
-				"duration_ms":   duration.Milliseconds(),
+				"duration_ms":   durationMS,
 				"result_length": len(result.ForLLM),
 			})
+	}
+
+	if hookManager != nil {
+		hookManager.RunAfterTool(ctx, invocation, hooks.ToolOutcome{
+			IsError: result.IsError,
+			ForLLM:  result.ForLLM,
+			ForUser: result.ForUser,
+			Async:   result.Async,
+		})
+		if result.IsError && result.Err != nil {
+			hookManager.EmitError(ctx, "tool_execute", result.Err, map[string]any{"tool": name})
+		}
+	}
+
+	if traceWriter != nil {
+		if run, ok := observability.RunFromContext(ctx); ok {
+			ev := observability.ToolEvent{
+				Tool:       name,
+				Args:       args,
+				Iteration:  iteration,
+				DurationMS: durationMS,
+				IsError:    result.IsError,
+				ErrorMsg:   result.ForLLM,
+			}
+			traceWriter.RecordToolEvent(run, ev, len(result.ForLLM))
+		}
 	}
 
 	return result

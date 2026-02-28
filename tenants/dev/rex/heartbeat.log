@@ -7,3 +7,334 @@
 [2026-02-22 20:47:34] [INFO] Heartbeat OK - silent
 [2026-02-22 20:48:49] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
 [2026-02-22 20:49:21] [INFO] Heartbeat OK - silent
+[2026-02-22 20:55:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 20:55:56] [INFO] Heartbeat OK - silent
+[2026-02-22 21:03:14] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:05:09] [INFO] Heartbeat OK - silent
+[2026-02-22 21:06:29] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:07:17] [INFO] Heartbeat OK - silent
+[2026-02-22 21:07:58] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:08:26] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:09:05] [INFO] Heartbeat OK - silent
+[2026-02-22 21:12:20] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:12:40] [INFO] Heartbeat OK - silent
+[2026-02-22 21:13:40] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:13:40] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: API request failed:
+  Status: 402
+  Body:   {"error":{"message":"This request requires more credits, or fewer max_tokens. You requested up to 200000 tokens, but can only afford 1119. To increase, visit https://openrouter.ai/settings/credits and add more credits","code":402,"metadata":{"provider_name":null}},"user_id":"user_2zjMHfDXZLQCWnOtBHjgF5LwCeD"}
+[2026-02-22 21:19:11] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:19:41] [INFO] Heartbeat OK - silent
+[2026-02-22 21:29:10] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:30:01] [INFO] Heartbeat OK - silent
+[2026-02-22 21:36:11] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:36:37] [INFO] Heartbeat OK - silent
+[2026-02-22 21:46:10] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:46:50] [INFO] Heartbeat OK - silent
+[2026-02-22 21:49:42] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:50:26] [INFO] Heartbeat OK - silent
+[2026-02-22 21:52:46] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 21:53:55] [INFO] Heartbeat OK - silent
+[2026-02-22 22:02:45] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 22:02:55] [INFO] Heartbeat OK - silent
+[2026-02-22 22:08:03] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 22:08:16] [INFO] Heartbeat OK - silent
+[2026-02-22 22:18:02] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 22:18:35] [INFO] Heartbeat OK - silent
+[2026-02-22 22:28:02] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 22:28:09] [INFO] Heartbeat OK - silent
+[2026-02-22 22:36:23] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 22:37:05] [INFO] Heartbeat OK - silent
+[2026-02-22 22:46:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 22:46:37] [INFO] Heartbeat OK - silent
+[2026-02-22 22:56:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 22:56:34] [INFO] Heartbeat OK - silent
+[2026-02-22 23:06:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 23:06:35] [INFO] Heartbeat OK - silent
+[2026-02-22 23:16:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 23:17:20] [INFO] Heartbeat OK - silent
+[2026-02-22 23:26:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 23:26:31] [INFO] Heartbeat OK - silent
+[2026-02-22 23:36:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 23:36:33] [INFO] Heartbeat OK - silent
+[2026-02-22 23:46:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 23:46:31] [INFO] Heartbeat OK - silent
+[2026-02-22 23:56:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-22 23:56:30] [INFO] Heartbeat OK - silent
+[2026-02-23 00:06:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 00:06:36] [INFO] Heartbeat OK - silent
+[2026-02-23 00:16:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 00:17:25] [INFO] Heartbeat OK - silent
+[2026-02-23 00:26:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 00:26:34] [INFO] Heartbeat OK - silent
+[2026-02-23 00:36:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 00:36:35] [INFO] Heartbeat OK - silent
+[2026-02-23 00:46:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 00:46:37] [INFO] Heartbeat OK - silent
+[2026-02-23 00:56:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 00:56:32] [INFO] Heartbeat OK - silent
+[2026-02-23 01:06:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 01:06:41] [INFO] Heartbeat OK - silent
+[2026-02-23 01:16:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 01:16:34] [INFO] Heartbeat OK - silent
+[2026-02-23 01:26:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 01:26:28] [INFO] Heartbeat OK - silent
+[2026-02-23 01:36:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 01:36:32] [INFO] Heartbeat OK - silent
+[2026-02-23 01:46:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 01:46:34] [INFO] Heartbeat OK - silent
+[2026-02-23 01:56:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 01:56:34] [INFO] Heartbeat OK - silent
+[2026-02-23 02:06:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 02:06:44] [INFO] Heartbeat OK - silent
+[2026-02-23 02:16:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 02:16:31] [INFO] Heartbeat OK - silent
+[2026-02-23 02:26:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 02:28:29] [INFO] Heartbeat OK - silent
+[2026-02-23 02:36:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 02:36:30] [INFO] Heartbeat OK - silent
+[2026-02-23 02:46:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 02:46:35] [INFO] Heartbeat OK - silent
+[2026-02-23 02:56:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 02:56:36] [INFO] Heartbeat OK - silent
+[2026-02-23 03:06:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 03:06:47] [INFO] Heartbeat OK - silent
+[2026-02-23 03:16:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 03:16:28] [INFO] Heartbeat OK - silent
+[2026-02-23 03:26:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 03:26:40] [INFO] Heartbeat OK - silent
+[2026-02-23 03:36:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 03:36:39] [INFO] Heartbeat OK - silent
+[2026-02-23 03:46:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 03:46:29] [INFO] Heartbeat OK - silent
+[2026-02-23 03:56:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 03:56:30] [INFO] Heartbeat OK - silent
+[2026-02-23 04:06:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 04:06:34] [INFO] Heartbeat OK - silent
+[2026-02-23 04:16:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 04:16:40] [INFO] Heartbeat OK - silent
+[2026-02-23 04:26:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 04:26:34] [INFO] Heartbeat OK - silent
+[2026-02-23 04:36:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 04:36:31] [INFO] Heartbeat OK - silent
+[2026-02-23 04:46:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 04:46:30] [INFO] Heartbeat OK - silent
+[2026-02-23 04:56:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 04:56:28] [INFO] Heartbeat OK - silent
+[2026-02-23 05:06:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 05:06:34] [INFO] Heartbeat OK - silent
+[2026-02-23 05:16:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 05:16:43] [INFO] Heartbeat OK - silent
+[2026-02-23 05:26:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 05:26:37] [INFO] Heartbeat OK - silent
+[2026-02-23 05:36:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 05:36:33] [INFO] Heartbeat OK - silent
+[2026-02-23 05:46:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 05:46:31] [INFO] Heartbeat OK - silent
+[2026-02-23 05:56:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 05:56:33] [INFO] Heartbeat OK - silent
+[2026-02-23 06:06:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 06:06:32] [INFO] Heartbeat OK - silent
+[2026-02-23 06:16:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 06:16:32] [INFO] Heartbeat OK - silent
+[2026-02-23 06:26:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 06:27:00] [INFO] Heartbeat OK - silent
+[2026-02-23 06:36:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 06:36:33] [INFO] Heartbeat OK - silent
+[2026-02-23 06:46:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 06:46:49] [INFO] Heartbeat OK - silent
+[2026-02-23 06:56:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 06:56:41] [INFO] Heartbeat OK - silent
+[2026-02-23 07:06:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 07:06:33] [INFO] Heartbeat OK - silent
+[2026-02-23 07:16:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 07:16:33] [INFO] Heartbeat OK - silent
+[2026-02-23 07:26:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 07:26:43] [INFO] Heartbeat OK - silent
+[2026-02-23 07:30:25] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 07:30:41] [INFO] Heartbeat OK - silent
+[2026-02-23 07:32:46] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 07:33:16] [INFO] Heartbeat OK - silent
+[2026-02-23 07:42:45] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 07:42:58] [INFO] Heartbeat OK - silent
+[2026-02-23 07:52:45] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 07:52:59] [INFO] Heartbeat OK - silent
+[2026-02-23 08:02:45] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 08:02:56] [INFO] Heartbeat OK - silent
+[2026-02-23 08:05:41] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 08:05:59] [INFO] Heartbeat OK - silent
+[2026-02-23 08:15:40] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 08:16:34] [INFO] Heartbeat OK - silent
+[2026-02-23 08:25:40] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 08:25:55] [INFO] Heartbeat OK - silent
+[2026-02-23 08:35:40] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 08:35:47] [INFO] Heartbeat OK - silent
+[2026-02-23 08:45:40] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 08:45:59] [INFO] Heartbeat OK - silent
+[2026-02-23 08:55:40] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 08:56:12] [INFO] Heartbeat OK - silent
+[2026-02-23 09:05:40] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 09:05:46] [INFO] Heartbeat OK - silent
+[2026-02-23 09:06:04] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 09:06:21] [INFO] Heartbeat OK - silent
+[2026-02-23 09:13:29] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 09:13:49] [INFO] Heartbeat OK - silent
+[2026-02-23 09:23:28] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 09:23:44] [INFO] Heartbeat OK - silent
+[2026-02-23 09:33:28] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 09:34:09] [INFO] Heartbeat OK - silent
+[2026-02-23 09:43:28] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 09:44:34] [INFO] Heartbeat OK - silent
+[2026-02-23 09:53:28] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 09:54:32] [INFO] Heartbeat OK - silent
+[2026-02-23 10:03:28] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:04:36] [INFO] Heartbeat OK - silent
+[2026-02-23 10:08:00] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:08:28] [INFO] Heartbeat OK - silent
+[2026-02-23 10:10:02] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:10:13] [INFO] Heartbeat OK - silent
+[2026-02-23 10:12:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:12:34] [INFO] Heartbeat OK - silent
+[2026-02-23 10:22:21] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:22:30] [INFO] Heartbeat OK - silent
+[2026-02-23 10:28:51] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:28:57] [INFO] Heartbeat OK - silent
+[2026-02-23 10:29:29] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:29:48] [INFO] Heartbeat OK - silent
+[2026-02-23 10:30:28] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:30:39] [INFO] Heartbeat OK - silent
+[2026-02-23 10:40:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:40:36] [INFO] Heartbeat OK - silent
+[2026-02-23 10:50:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 10:50:35] [INFO] Heartbeat OK - silent
+[2026-02-23 11:00:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 11:00:59] [INFO] Heartbeat OK - silent
+[2026-02-23 11:10:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 11:10:51] [INFO] Heartbeat OK - silent
+[2026-02-23 11:20:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 11:20:47] [INFO] Heartbeat OK - silent
+[2026-02-23 11:30:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 11:30:36] [INFO] Heartbeat OK - silent
+[2026-02-23 11:40:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 11:40:46] [INFO] Heartbeat OK - silent
+[2026-02-23 11:50:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 11:50:54] [INFO] Heartbeat OK - silent
+[2026-02-23 12:00:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 12:01:09] [INFO] Heartbeat OK - silent
+[2026-02-23 12:10:27] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 12:10:36] [INFO] Heartbeat OK - silent
+[2026-02-23 15:20:44] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 19:34:36] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 19:34:44] [INFO] Heartbeat OK - silent
+[2026-02-23 19:39:58] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 19:40:38] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 19:40:44] [INFO] Heartbeat OK - silent
+[2026-02-23 19:50:00] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 19:50:12] [INFO] Heartbeat OK - silent
+[2026-02-23 19:56:00] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 19:56:12] [INFO] Heartbeat OK - silent
+[2026-02-23 20:05:59] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 20:07:59] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: failed to read response: context deadline exceeded (Client.Timeout or context cancellation while reading body)
+[2026-02-23 20:09:51] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 20:10:20] [INFO] Heartbeat OK - silent
+[2026-02-23 20:10:47] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 20:10:57] [INFO] Heartbeat OK - silent
+[2026-02-23 20:20:46] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 20:20:57] [INFO] Heartbeat OK - silent
+[2026-02-23 20:30:46] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 20:32:51] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: failed to read response: context deadline exceeded (Client.Timeout or context cancellation while reading body)
+[2026-02-23 20:40:46] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-23 20:41:00] [INFO] Heartbeat OK - silent
+[2026-02-24 16:57:22] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 16:57:34] [INFO] Heartbeat OK - silent
+[2026-02-24 17:00:17] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 17:00:26] [INFO] Heartbeat OK - silent
+[2026-02-24 17:10:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 17:10:52] [INFO] Heartbeat OK - silent
+[2026-02-24 17:20:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 17:20:22] [INFO] Heartbeat OK - silent
+[2026-02-24 17:30:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 17:30:23] [INFO] Heartbeat OK - silent
+[2026-02-24 17:40:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 17:40:34] [INFO] Heartbeat OK - silent
+[2026-02-24 17:50:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 17:50:40] [INFO] Heartbeat OK - silent
+[2026-02-24 18:00:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 18:00:39] [INFO] Heartbeat OK - silent
+[2026-02-24 18:10:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 18:11:03] [INFO] Heartbeat OK - silent
+[2026-02-24 18:20:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 18:21:25] [INFO] Heartbeat OK - silent
+[2026-02-24 18:30:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 18:30:20] [INFO] Heartbeat OK - silent
+[2026-02-24 18:40:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 18:40:20] [INFO] Heartbeat OK - silent
+[2026-02-24 18:50:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 18:50:27] [INFO] Heartbeat OK - silent
+[2026-02-24 19:00:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 19:00:46] [INFO] Heartbeat OK - silent
+[2026-02-24 19:10:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 19:10:47] [INFO] Heartbeat OK - silent
+[2026-02-24 19:20:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 19:20:47] [INFO] Heartbeat OK - silent
+[2026-02-24 19:30:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 19:30:36] [INFO] Heartbeat OK - silent
+[2026-02-24 19:40:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 19:40:59] [INFO] Heartbeat OK - silent
+[2026-02-24 19:50:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 19:50:21] [INFO] Heartbeat OK - silent
+[2026-02-24 20:00:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 20:00:32] [INFO] Heartbeat OK - silent
+[2026-02-24 20:10:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 20:10:45] [INFO] Heartbeat OK - silent
+[2026-02-24 20:20:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 20:20:27] [INFO] Heartbeat OK - silent
+[2026-02-24 20:30:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 20:30:41] [INFO] Heartbeat OK - silent
+[2026-02-24 20:40:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 20:40:26] [INFO] Heartbeat OK - silent
+[2026-02-24 20:50:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 20:51:34] [INFO] Heartbeat OK - silent
+[2026-02-24 21:00:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 21:01:05] [INFO] Heartbeat OK - silent
+[2026-02-24 21:10:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 21:11:12] [INFO] Heartbeat OK - silent
+[2026-02-24 21:20:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 21:22:16] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: failed to read response: context deadline exceeded (Client.Timeout or context cancellation while reading body)
+[2026-02-24 21:30:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 21:30:33] [INFO] Heartbeat OK - silent
+[2026-02-24 21:40:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 21:40:20] [INFO] Heartbeat OK - silent
+[2026-02-24 21:50:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 21:50:54] [INFO] Heartbeat OK - silent
+[2026-02-24 22:00:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 22:02:30] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: failed to read response: context deadline exceeded (Client.Timeout or context cancellation while reading body)
+[2026-02-24 22:10:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 22:10:22] [INFO] Heartbeat OK - silent
+[2026-02-24 22:20:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 22:20:41] [INFO] Heartbeat OK - silent
+[2026-02-24 22:30:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 22:32:16] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: failed to read response: context deadline exceeded (Client.Timeout or context cancellation while reading body)
+[2026-02-24 22:40:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 22:42:22] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: failed to read response: context deadline exceeded (Client.Timeout or context cancellation while reading body)
+[2026-02-24 22:50:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 22:50:41] [INFO] Heartbeat OK - silent
+[2026-02-24 23:00:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 23:00:30] [INFO] Heartbeat OK - silent
+[2026-02-24 23:10:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 23:11:35] [INFO] Heartbeat OK - silent
+[2026-02-24 23:20:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 23:21:08] [INFO] Heartbeat OK - silent
+[2026-02-24 23:30:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 23:32:16] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: failed to read response: context deadline exceeded (Client.Timeout or context cancellation while reading body)
+[2026-02-24 23:40:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 23:41:00] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: API request failed:
+  Status: 402
+  Body:   {"error":{"message":"This request requires more credits, or fewer max_tokens. You requested up to 200000 tokens, but can only afford 179412. To increase, visit https://openrouter.ai/settings/credits and add more credits","code":402,"metadata":{"provider_name":null}},"user_id":"user_2zjMHfDXZLQCWnOtBHjgF5LwCeD"}
+[2026-02-24 23:50:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-24 23:50:16] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: API request failed:
+  Status: 402
+  Body:   {"error":{"message":"This request requires more credits, or fewer max_tokens. You requested up to 200000 tokens, but can only afford 146608. To increase, visit https://openrouter.ai/settings/credits and add more credits","code":402,"metadata":{"provider_name":null}},"user_id":"user_2zjMHfDXZLQCWnOtBHjgF5LwCeD"}
+[2026-02-25 00:00:16] [INFO] Resolved channel: telegram, chatID: -5099033473 (from lastChannel: telegram:-5099033473)
+[2026-02-25 00:00:16] [ERROR] Heartbeat error: Heartbeat error: LLM call failed after retries: API request failed:
+  Status: 402
+  Body:   {"error":{"message":"This request requires more credits, or fewer max_tokens. You requested up to 200000 tokens, but can only afford 117287. To increase, visit https://openrouter.ai/settings/credits and add more credits","code":402,"metadata":{"provider_name":null}},"user_id":"user_2zjMHfDXZLQCWnOtBHjgF5LwCeD"}

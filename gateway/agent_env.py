@@ -109,9 +109,6 @@ def build_agent_env() -> dict:
         env["GH_TOKEN"] = gh_token
         env["GITHUB_TOKEN"] = gh_token
 
-    # Signal to task_runner.py that tool-event emission is enabled
-    env["PICOCLAW_WEAVE_OBSERVE"] = "1"
-
     # Task containers are NOT on the compose network, so they can't resolve
     # internal hostnames like "picoclaw-traces-db". Rewrite to host.docker.internal
     # so they reach Postgres via the exposed host port instead.

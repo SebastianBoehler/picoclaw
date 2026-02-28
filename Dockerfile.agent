@@ -34,6 +34,12 @@ RUN apk add --no-cache \
     # Node: pptxgenjs (create PPTX from scratch) + docx (create DOCX from scratch)
     npm install -g pptxgenjs docx
 
+# LaTeX toolchain for academic-paper skill (TikZ, PGFPlots, latexmk, IEEEtran, etc.)
+RUN apk add --no-cache \
+    texlive texlive-luatex texlive-xetex texlive-binextra \
+    texlive-latexextra texlive-latexrecommended \
+    texlive-pictures texlive-mathscience
+
 # Browser automation — browser-use + Playwright using system Chromium (Alpine)
 RUN apk add --no-cache \
     chromium nss freetype harfbuzz ttf-freefont font-noto-emoji dbus udev && \

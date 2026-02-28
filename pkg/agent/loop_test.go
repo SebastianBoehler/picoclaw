@@ -11,6 +11,7 @@ import (
 	"github.com/sipeed/picoclaw/pkg/bus"
 	"github.com/sipeed/picoclaw/pkg/config"
 	"github.com/sipeed/picoclaw/pkg/providers"
+	"github.com/sipeed/picoclaw/pkg/routing"
 	"github.com/sipeed/picoclaw/pkg/tools"
 )
 
@@ -340,6 +341,141 @@ func TestAgentLoop_Stop(t *testing.T) {
 	// Verify running is false (initial state or after Stop)
 	if al.running.Load() {
 		t.Error("Expected agent to be stopped (or never started)")
+	}
+}
+
+func TestGetContextSnapshot_UsesActiveSessionKey(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cfg := &config.Config{
+		Agents: config.AgentsConfig{
+			Defaults: config.AgentDefaults{
+				Workspace:         tmpDir,
+				Model:             "test-model",
+				MaxTokens:         4096,
+				MaxToolIterations: 10,
+			},
+		},
+	}
+
+	msgBus := bus.NewMessageBus()
+	provider := &mockProvider{}
+	al := NewAgentLoop(cfg, msgBus, provider)
+	defaultAgent := al.registry.GetDefaultAgent()
+	if defaultAgent == nil {
+		t.Fatal("Expected default agent")
+	}
+
+	mainSession := routing.BuildAgentMainSessionKey(defaultAgent.ID)
+	activeSession := "agent:test:telegram:direct:user-42"
+
+	defaultAgent.Sessions.AddFullMessage(mainSession, providers.Message{Role: "user", Content: "main-session-message"})
+	defaultAgent.Sessions.AddFullMessage(activeSession, providers.Message{Role: "user", Content: "active-session-message"})
+
+	al.setActiveSession(defaultAgent.ID, activeSession)
+
+	snap := al.GetContextSnapshot()
+	if snap.SessionKey != activeSession {
+		t.Fatalf("expected session key %q, got %q", activeSession, snap.SessionKey)
+	}
+
+	found := false
+	for _, msg := range snap.Messages {
+		if msg.Role == "user" && msg.Preview == "active-session-message" {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("expected active session content in snapshot messages, got %+v", snap.Messages)
+	}
+}
+
+func TestGetContextSnapshot_FallsBackToMainSessionKey(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cfg := &config.Config{
+		Agents: config.AgentsConfig{
+			Defaults: config.AgentDefaults{
+				Workspace:         tmpDir,
+				Model:             "test-model",
+				MaxTokens:         4096,
+				MaxToolIterations: 10,
+			},
+		},
+	}
+
+	msgBus := bus.NewMessageBus()
+	provider := &mockProvider{}
+	al := NewAgentLoop(cfg, msgBus, provider)
+	defaultAgent := al.registry.GetDefaultAgent()
+	if defaultAgent == nil {
+		t.Fatal("Expected default agent")
+	}
+
+	mainSession := routing.BuildAgentMainSessionKey(defaultAgent.ID)
+	defaultAgent.Sessions.AddFullMessage(mainSession, providers.Message{Role: "user", Content: "main-fallback-message"})
+
+	snap := al.GetContextSnapshot()
+	if snap.SessionKey != mainSession {
+		t.Fatalf("expected fallback main session key %q, got %q", mainSession, snap.SessionKey)
+	}
+}
+
+func TestRunAgentLoop_NoHistoryDoesNotOverrideActiveSession(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cfg := &config.Config{
+		Agents: config.AgentsConfig{
+			Defaults: config.AgentDefaults{
+				Workspace:         tmpDir,
+				Model:             "test-model",
+				MaxTokens:         4096,
+				MaxToolIterations: 10,
+			},
+		},
+	}
+
+	msgBus := bus.NewMessageBus()
+	provider := &simpleMockProvider{response: "ok"}
+	al := NewAgentLoop(cfg, msgBus, provider)
+	defaultAgent := al.registry.GetDefaultAgent()
+	if defaultAgent == nil {
+		t.Fatal("Expected default agent")
+	}
+
+	activeSession := "agent:main:telegram:direct:user-42"
+	al.setActiveSession(defaultAgent.ID, activeSession)
+
+	_, err = al.runAgentLoop(context.Background(), defaultAgent, processOptions{
+		SessionKey:      "heartbeat",
+		Channel:         "telegram",
+		ChatID:          "123",
+		UserMessage:     "heartbeat check",
+		DefaultResponse: "ok",
+		EnableSummary:   false,
+		SendResponse:    false,
+		NoHistory:       true,
+	})
+	if err != nil {
+		t.Fatalf("runAgentLoop failed: %v", err)
+	}
+
+	got := al.getActiveSession(defaultAgent.ID)
+	if got != activeSession {
+		t.Fatalf("expected active session to remain %q, got %q", activeSession, got)
 	}
 }
 
