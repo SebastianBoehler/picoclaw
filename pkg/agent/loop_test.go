@@ -439,6 +439,221 @@ func TestProcessMessage_UsesRouteSessionKey(t *testing.T) {
 	}
 }
 
+func TestProcessMessage_GroupReplyRequiresMention_ObservesWithoutReply(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cfg := &config.Config{
+		Agents: config.AgentsConfig{
+			Defaults: config.AgentDefaults{
+				Workspace:         tmpDir,
+				Model:             "test-model",
+				MaxTokens:         4096,
+				MaxToolIterations: 10,
+			},
+			List: []config.AgentConfig{{
+				ID:      "main",
+				Default: true,
+				GroupChat: &config.AgentGroupChatConfig{
+					ReplyRequiresMention: true,
+				},
+			}},
+		},
+	}
+
+	msgBus := bus.NewMessageBus()
+	provider := &countingMockProvider{response: "group reply"}
+	al := NewAgentLoop(cfg, msgBus, provider)
+	helper := testHelper{al: al}
+
+	msg := bus.InboundMessage{
+		Channel:  "telegram",
+		SenderID: "user1",
+		ChatID:   "chat1",
+		Content:  "hello everyone",
+		Peer: bus.Peer{
+			Kind: "group",
+			ID:   "chat1",
+		},
+		Metadata: map[string]string{
+			"is_group":     "true",
+			"is_mentioned": "false",
+		},
+	}
+
+	response := helper.executeAndGetResponse(t, context.Background(), msg)
+	if response != "" {
+		t.Fatalf("expected no reply, got %q", response)
+	}
+	if provider.calls != 0 {
+		t.Fatalf("LLM should not be called for observed-only message, calls=%d", provider.calls)
+	}
+
+	route := al.registry.ResolveRoute(routing.RouteInput{
+		Channel: msg.Channel,
+		Peer:    extractPeer(msg),
+	})
+	defaultAgent := al.registry.GetDefaultAgent()
+	if defaultAgent == nil {
+		t.Fatal("No default agent found")
+	}
+
+	history := defaultAgent.Sessions.GetHistory(route.SessionKey)
+	if len(history) != 1 {
+		t.Fatalf("expected observed history len=1, got %d", len(history))
+	}
+	if history[0].Role != "user" || history[0].Content != "hello everyone" {
+		t.Fatalf("unexpected observed message: %+v", history[0])
+	}
+}
+
+func TestProcessMessage_GroupReplyRequiresMention_RepliesWhenMentioned(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cfg := &config.Config{
+		Agents: config.AgentsConfig{
+			Defaults: config.AgentDefaults{
+				Workspace:         tmpDir,
+				Model:             "test-model",
+				MaxTokens:         4096,
+				MaxToolIterations: 10,
+			},
+			List: []config.AgentConfig{{
+				ID:      "main",
+				Default: true,
+				GroupChat: &config.AgentGroupChatConfig{
+					ReplyRequiresMention: true,
+				},
+			}},
+		},
+	}
+
+	msgBus := bus.NewMessageBus()
+	provider := &countingMockProvider{response: "group reply"}
+	al := NewAgentLoop(cfg, msgBus, provider)
+	helper := testHelper{al: al}
+
+	baseMsg := bus.InboundMessage{
+		Channel:  "telegram",
+		SenderID: "user1",
+		ChatID:   "chat1",
+		Peer: bus.Peer{
+			Kind: "group",
+			ID:   "chat1",
+		},
+		Metadata: map[string]string{
+			"is_group": "true",
+		},
+	}
+
+	_ = helper.executeAndGetResponse(t, context.Background(), bus.InboundMessage{
+		Channel:  baseMsg.Channel,
+		SenderID: baseMsg.SenderID,
+		ChatID:   baseMsg.ChatID,
+		Content:  "keep this in context",
+		Peer:     baseMsg.Peer,
+		Metadata: map[string]string{
+			"is_group":     "true",
+			"is_mentioned": "false",
+		},
+	})
+
+	response := helper.executeAndGetResponse(t, context.Background(), bus.InboundMessage{
+		Channel:  baseMsg.Channel,
+		SenderID: baseMsg.SenderID,
+		ChatID:   baseMsg.ChatID,
+		Content:  "@bot answer now",
+		Peer:     baseMsg.Peer,
+		Metadata: map[string]string{
+			"is_group":     "true",
+			"is_mentioned": "true",
+		},
+	})
+
+	if response != "group reply" {
+		t.Fatalf("unexpected reply: %q", response)
+	}
+	if provider.calls != 1 {
+		t.Fatalf("LLM should be called once for mentioned message, calls=%d", provider.calls)
+	}
+
+	route := al.registry.ResolveRoute(routing.RouteInput{
+		Channel: baseMsg.Channel,
+		Peer:    extractPeer(baseMsg),
+	})
+	defaultAgent := al.registry.GetDefaultAgent()
+	if defaultAgent == nil {
+		t.Fatal("No default agent found")
+	}
+
+	history := defaultAgent.Sessions.GetHistory(route.SessionKey)
+	if len(history) != 3 {
+		t.Fatalf("expected history len=3, got %d", len(history))
+	}
+	if history[0].Content != "keep this in context" || history[1].Content != "@bot answer now" || history[2].Content != "group reply" {
+		t.Fatalf("unexpected history: %+v", history)
+	}
+}
+
+func TestProcessMessage_GroupReplyRequiresMention_SkipsSuppressionWithoutMentionMetadata(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	cfg := &config.Config{
+		Agents: config.AgentsConfig{
+			Defaults: config.AgentDefaults{
+				Workspace:         tmpDir,
+				Model:             "test-model",
+				MaxTokens:         4096,
+				MaxToolIterations: 10,
+			},
+			List: []config.AgentConfig{{
+				ID:      "main",
+				Default: true,
+				GroupChat: &config.AgentGroupChatConfig{
+					ReplyRequiresMention: true,
+				},
+			}},
+		},
+	}
+
+	msgBus := bus.NewMessageBus()
+	provider := &countingMockProvider{response: "other channel reply"}
+	al := NewAgentLoop(cfg, msgBus, provider)
+	helper := testHelper{al: al}
+
+	response := helper.executeAndGetResponse(t, context.Background(), bus.InboundMessage{
+		Channel:  "whatsapp",
+		SenderID: "user1",
+		ChatID:   "chat1",
+		Content:  "hello group",
+		Peer: bus.Peer{
+			Kind: "group",
+			ID:   "chat1",
+		},
+		Metadata: map[string]string{
+			"is_group": "true",
+		},
+	})
+
+	if response != "other channel reply" {
+		t.Fatalf("unexpected reply: %q", response)
+	}
+	if provider.calls != 1 {
+		t.Fatalf("LLM should still run when mention metadata is unavailable, calls=%d", provider.calls)
+	}
+}
+
 func TestProcessMessage_CommandOutcomes(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "agent-test-*")
 	if err != nil {

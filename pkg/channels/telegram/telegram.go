@@ -415,6 +415,12 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	if user == nil {
 		return fmt.Errorf("message sender (user) is nil")
 	}
+	if user.IsBot {
+		logger.DebugCF("telegram", "Ignoring bot-authored message", map[string]any{
+			"user_id": user.ID,
+		})
+		return nil
+	}
 
 	platformID := fmt.Sprintf("%d", user.ID)
 	sender := bus.SenderInfo{
@@ -518,9 +524,10 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 		content = "[empty message]"
 	}
 
+	isMentioned := false
 	// In group chats, apply unified group trigger filtering
 	if message.Chat.Type != "private" {
-		isMentioned := c.isBotMentioned(message)
+		isMentioned = c.isBotMentioned(message)
 		if isMentioned {
 			content = c.stripBotMention(content)
 		}
@@ -559,10 +566,11 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	messageID := fmt.Sprintf("%d", message.MessageID)
 
 	metadata := map[string]string{
-		"user_id":    fmt.Sprintf("%d", user.ID),
-		"username":   user.Username,
-		"first_name": user.FirstName,
-		"is_group":   fmt.Sprintf("%t", message.Chat.Type != "private"),
+		"user_id":      fmt.Sprintf("%d", user.ID),
+		"username":     user.Username,
+		"first_name":   user.FirstName,
+		"is_group":     fmt.Sprintf("%t", message.Chat.Type != "private"),
+		"is_mentioned": fmt.Sprintf("%t", isMentioned),
 	}
 
 	// Set parent_peer metadata for per-topic agent binding.

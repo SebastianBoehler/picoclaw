@@ -69,6 +69,8 @@ const (
 	metadataKeyAccountID      = "account_id"
 	metadataKeyGuildID        = "guild_id"
 	metadataKeyTeamID         = "team_id"
+	metadataKeyIsGroup        = "is_group"
+	metadataKeyIsMentioned    = "is_mentioned"
 	metadataKeyParentPeerKind = "parent_peer_kind"
 	metadataKeyParentPeerID   = "parent_peer_id"
 )
@@ -711,6 +713,11 @@ func (al *AgentLoop) processMessage(ctx context.Context, msg bus.InboundMessage)
 			"route_channel": route.Channel,
 		})
 
+	if shouldObserveGroupMessage(msg, agent) {
+		al.observeGroupMessage(agent, sessionKey, msg)
+		return "", nil
+	}
+
 	opts := processOptions{
 		SessionKey:      sessionKey,
 		Channel:         msg.Channel,
@@ -729,6 +736,33 @@ func (al *AgentLoop) processMessage(ctx context.Context, msg bus.InboundMessage)
 	}
 
 	return al.runAgentLoop(ctx, agent, opts)
+}
+
+func shouldObserveGroupMessage(msg bus.InboundMessage, agent *AgentInstance) bool {
+	if agent == nil || agent.GroupChat == nil || !agent.GroupChat.ReplyRequiresMention {
+		return false
+	}
+	if !inboundMetadataBoolValue(msg, metadataKeyIsGroup) {
+		return false
+	}
+	isMentioned, ok := inboundMetadataBool(msg, metadataKeyIsMentioned)
+	if !ok {
+		return false
+	}
+	return !isMentioned
+}
+
+func (al *AgentLoop) observeGroupMessage(agent *AgentInstance, sessionKey string, msg bus.InboundMessage) {
+	agent.Sessions.AddMessage(sessionKey, "user", msg.Content)
+	agent.Sessions.Save(sessionKey)
+	al.maybeSummarize(agent, sessionKey, msg.Channel, msg.ChatID)
+	logger.InfoCF("agent", "Observed group message without replying",
+		map[string]any{
+			"agent_id":    agent.ID,
+			"session_key": sessionKey,
+			"channel":     msg.Channel,
+			"chat_id":     msg.ChatID,
+		})
 }
 
 func (al *AgentLoop) resolveMessageRoute(msg bus.InboundMessage) (routing.ResolvedRoute, *AgentInstance, error) {
@@ -1044,7 +1078,12 @@ func (al *AgentLoop) runLLMIteration(
 					ctx,
 					activeCandidates,
 					func(ctx context.Context, provider, model string) (*providers.LLMResponse, error) {
-						return agent.Provider.Chat(ctx, messages, providerToolDefs, model, llmOpts)
+						modelRef := provider + "/" + model
+						candidateProvider, candidateModel, err := providers.CreateProviderForModelRef(al.cfg, modelRef)
+						if err != nil {
+							return nil, err
+						}
+						return candidateProvider.Chat(ctx, messages, providerToolDefs, candidateModel, llmOpts)
 					},
 				)
 				if fbErr != nil {
@@ -1912,6 +1951,23 @@ func inboundMetadata(msg bus.InboundMessage, key string) string {
 		return ""
 	}
 	return msg.Metadata[key]
+}
+
+func inboundMetadataBool(msg bus.InboundMessage, key string) (bool, bool) {
+	value := strings.TrimSpace(strings.ToLower(inboundMetadata(msg, key)))
+	switch value {
+	case "true", "1", "yes":
+		return true, true
+	case "false", "0", "no":
+		return false, true
+	default:
+		return false, false
+	}
+}
+
+func inboundMetadataBoolValue(msg bus.InboundMessage, key string) bool {
+	value, ok := inboundMetadataBool(msg, key)
+	return ok && value
 }
 
 // extractParentPeer extracts the parent peer (reply-to) from inbound message metadata.

@@ -37,6 +37,7 @@ type AgentInstance struct {
 	ContextBuilder            *ContextBuilder
 	Tools                     *tools.ToolRegistry
 	Subagents                 *config.SubagentsConfig
+	GroupChat                 *config.AgentGroupChatConfig
 	SkillsFilter              []string
 	Candidates                []providers.FallbackCandidate
 
@@ -108,12 +109,14 @@ func NewAgentInstance(
 	agentID := routing.DefaultAgentID
 	agentName := ""
 	var subagents *config.SubagentsConfig
+	var groupChat *config.AgentGroupChatConfig
 	var skillsFilter []string
 
 	if agentCfg != nil {
 		agentID = routing.NormalizeAgentID(agentCfg.ID)
 		agentName = agentCfg.Name
 		subagents = agentCfg.Subagents
+		groupChat = agentCfg.GroupChat
 		skillsFilter = agentCfg.Skills
 	}
 
@@ -232,6 +235,7 @@ func NewAgentInstance(
 		ContextBuilder:            contextBuilder,
 		Tools:                     toolsRegistry,
 		Subagents:                 subagents,
+		GroupChat:                 groupChat,
 		SkillsFilter:              skillsFilter,
 		Candidates:                candidates,
 		Router:                    router,

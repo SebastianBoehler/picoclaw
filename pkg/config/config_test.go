@@ -86,6 +86,9 @@ func TestAgentConfig_FullParse(t *testing.T) {
 						"primary": "claude-opus",
 						"fallbacks": ["haiku"]
 					},
+					"group_chat": {
+						"reply_requires_mention": true
+					},
 					"subagents": {
 						"allow_agents": ["sales"]
 					}
@@ -133,6 +136,9 @@ func TestAgentConfig_FullParse(t *testing.T) {
 	}
 	if support.Model == nil || support.Model.Primary != "claude-opus" {
 		t.Errorf("support.Model = %+v", support.Model)
+	}
+	if support.GroupChat == nil || !support.GroupChat.ReplyRequiresMention {
+		t.Errorf("support.GroupChat = %+v", support.GroupChat)
 	}
 	if len(support.Model.Fallbacks) != 1 || support.Model.Fallbacks[0] != "haiku" {
 		t.Errorf("support.Model.Fallbacks = %v", support.Model.Fallbacks)
