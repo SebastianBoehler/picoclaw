@@ -3,6 +3,8 @@ package agent
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"slices"
@@ -340,6 +342,22 @@ func (m *countingMockProvider) Chat(
 
 func (m *countingMockProvider) GetDefaultModel() string {
 	return "counting-mock-model"
+}
+
+type alwaysFailingMockProvider struct{}
+
+func (m *alwaysFailingMockProvider) Chat(
+	ctx context.Context,
+	messages []providers.Message,
+	tools []providers.ToolDefinition,
+	model string,
+	opts map[string]any,
+) (*providers.LLMResponse, error) {
+	return nil, fmt.Errorf("API request failed:\n  Status: 429\n  Body:   rate limited")
+}
+
+func (m *alwaysFailingMockProvider) GetDefaultModel() string {
+	return "always-failing"
 }
 
 // mockCustomTool is a simple mock tool for registration testing
@@ -767,6 +785,72 @@ func TestAgentLoop_ContextExhaustionRetry(t *testing.T) {
 	// Without compression: 6 + 1 (new user msg) + 1 (assistant msg) = 8
 	if len(finalHistory) >= 8 {
 		t.Errorf("Expected history to be compressed (len < 8), got %d", len(finalHistory))
+	}
+}
+
+func TestProcessMessage_FallbackUsesResolvedProviderConfig(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "agent-test-*")
+	if err != nil {
+		t.Fatalf("Failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	primaryServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusTooManyRequests)
+		_, _ = w.Write([]byte(`{"error":{"message":"rate limited"}}`))
+	}))
+	defer primaryServer.Close()
+
+	fallbackServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/chat/completions" {
+			t.Fatalf("request path = %q, want /chat/completions", r.URL.Path)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"content":"fallback success"},"finish_reason":"stop"}]}`))
+	}))
+	defer fallbackServer.Close()
+
+	cfg := &config.Config{
+		Agents: config.AgentsConfig{
+			Defaults: config.AgentDefaults{
+				Workspace:         tmpDir,
+				ModelName:         "primary-openrouter",
+				ModelFallbacks:    []string{"fallback-openai"},
+				MaxTokens:         4096,
+				MaxToolIterations: 10,
+			},
+		},
+		ModelList: []config.ModelConfig{
+			{
+				ModelName: "primary-openrouter",
+				Model:     "openrouter/auto",
+				APIKey:    "sk-or-test",
+				APIBase:   primaryServer.URL,
+			},
+			{
+				ModelName: "fallback-openai",
+				Model:     "openai/gpt-4o-mini",
+				APIKey:    "sk-openai-test",
+				APIBase:   fallbackServer.URL,
+			},
+		},
+	}
+
+	al := NewAgentLoop(cfg, bus.NewMessageBus(), &alwaysFailingMockProvider{})
+
+	response, err := al.ProcessDirectWithChannel(
+		context.Background(),
+		"hello",
+		"test-fallback-session",
+		"telegram",
+		"chat-1",
+	)
+	if err != nil {
+		t.Fatalf("ProcessDirectWithChannel() error = %v", err)
+	}
+	if response != "fallback success" {
+		t.Fatalf("response = %q, want %q", response, "fallback success")
 	}
 }
 
