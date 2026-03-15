@@ -524,20 +524,6 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 		content = "[empty message]"
 	}
 
-	isMentioned := false
-	// In group chats, apply unified group trigger filtering
-	if message.Chat.Type != "private" {
-		isMentioned = c.isBotMentioned(message)
-		if isMentioned {
-			content = c.stripBotMention(content)
-		}
-		respond, cleaned := c.ShouldRespondInGroup(isMentioned, content)
-		if !respond {
-			return nil
-		}
-		content = cleaned
-	}
-
 	// For forum topics, embed the thread ID as "chatID/threadID" so replies
 	// route to the correct topic and each topic gets its own session.
 	// Only forum groups (IsForum) are handled; regular group reply threads
@@ -547,13 +533,6 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	if message.Chat.IsForum && threadID != 0 {
 		compositeChatID = fmt.Sprintf("%d/%d", chatID, threadID)
 	}
-
-	logger.DebugCF("telegram", "Received message", map[string]any{
-		"sender_id": sender.CanonicalID,
-		"chat_id":   compositeChatID,
-		"thread_id": threadID,
-		"preview":   utils.Truncate(content, 50),
-	})
 
 	peerKind := "direct"
 	peerID := fmt.Sprintf("%d", user.ID)
@@ -566,11 +545,9 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 	messageID := fmt.Sprintf("%d", message.MessageID)
 
 	metadata := map[string]string{
-		"user_id":      fmt.Sprintf("%d", user.ID),
-		"username":     user.Username,
-		"first_name":   user.FirstName,
-		"is_group":     fmt.Sprintf("%t", message.Chat.Type != "private"),
-		"is_mentioned": fmt.Sprintf("%t", isMentioned),
+		"user_id":    fmt.Sprintf("%d", user.ID),
+		"username":   user.Username,
+		"first_name": user.FirstName,
 	}
 
 	// Set parent_peer metadata for per-topic agent binding.
@@ -578,6 +555,39 @@ func (c *TelegramChannel) handleMessage(ctx context.Context, message *telego.Mes
 		metadata["parent_peer_kind"] = "topic"
 		metadata["parent_peer_id"] = fmt.Sprintf("%d", threadID)
 	}
+
+	isMentioned := false
+	// In group chats, apply unified group trigger filtering
+	if message.Chat.Type != "private" {
+		isMentioned = c.isBotMentioned(message)
+		if isMentioned {
+			content = c.stripBotMention(content)
+		}
+		respond, cleaned := c.ShouldRespondInGroup(isMentioned, content)
+		if !respond {
+			if c.GroupTrigger().ObserveOnly {
+				c.PersistMessage(c.ctx,
+					peer,
+					messageID,
+					platformID,
+					compositeChatID,
+					content,
+					mediaPaths,
+					metadata,
+					sender,
+				)
+			}
+			return nil
+		}
+		content = cleaned
+	}
+
+	logger.DebugCF("telegram", "Received message", map[string]any{
+		"sender_id": sender.CanonicalID,
+		"chat_id":   compositeChatID,
+		"thread_id": threadID,
+		"preview":   utils.Truncate(content, 50),
+	})
 
 	c.HandleMessage(c.ctx,
 		peer,

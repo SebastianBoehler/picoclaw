@@ -86,14 +86,19 @@ func TestAgentConfig_FullParse(t *testing.T) {
 						"primary": "claude-opus",
 						"fallbacks": ["haiku"]
 					},
-					"group_chat": {
-						"reply_requires_mention": true
-					},
 					"subagents": {
 						"allow_agents": ["sales"]
 					}
 				}
 			]
+		},
+		"channels": {
+			"telegram": {
+				"group_trigger": {
+					"mention_only": true,
+					"observe_only": true
+				}
+			}
 		},
 		"bindings": [
 			{
@@ -137,14 +142,14 @@ func TestAgentConfig_FullParse(t *testing.T) {
 	if support.Model == nil || support.Model.Primary != "claude-opus" {
 		t.Errorf("support.Model = %+v", support.Model)
 	}
-	if support.GroupChat == nil || !support.GroupChat.ReplyRequiresMention {
-		t.Errorf("support.GroupChat = %+v", support.GroupChat)
-	}
 	if len(support.Model.Fallbacks) != 1 || support.Model.Fallbacks[0] != "haiku" {
 		t.Errorf("support.Model.Fallbacks = %v", support.Model.Fallbacks)
 	}
 	if support.Subagents == nil || len(support.Subagents.AllowAgents) != 1 {
 		t.Errorf("support.Subagents = %+v", support.Subagents)
+	}
+	if !cfg.Channels.Telegram.GroupTrigger.MentionOnly || !cfg.Channels.Telegram.GroupTrigger.ObserveOnly {
+		t.Errorf("cfg.Channels.Telegram.GroupTrigger = %+v", cfg.Channels.Telegram.GroupTrigger)
 	}
 
 	if len(cfg.Bindings) != 1 {
