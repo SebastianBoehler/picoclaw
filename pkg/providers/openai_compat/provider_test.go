@@ -567,6 +567,15 @@ func TestNormalizeModel_UsesAPIBase(t *testing.T) {
 	if got := normalizeModel("openrouter/auto", "https://openrouter.ai/api/v1"); got != "openrouter/auto" {
 		t.Fatalf("normalizeModel(openrouter) = %q, want %q", got, "openrouter/auto")
 	}
+	if got := normalizeModel("openrouter/free", "https://openrouter.ai/api/v1"); got != "openrouter/free" {
+		t.Fatalf("normalizeModel(openrouter free) = %q, want %q", got, "openrouter/free")
+	}
+	if got := normalizeModel("openrouter/openai/gpt-5.4", "https://openrouter.ai/api/v1"); got != "openai/gpt-5.4" {
+		t.Fatalf("normalizeModel(openrouter nested openai) = %q, want %q", got, "openai/gpt-5.4")
+	}
+	if got := normalizeModel("openrouter/minimax/minimax-m2.5", "https://openrouter.ai/api/v1"); got != "minimax/minimax-m2.5" {
+		t.Fatalf("normalizeModel(openrouter nested minimax) = %q, want %q", got, "minimax/minimax-m2.5")
+	}
 	if got := normalizeModel("vivgrid/managed", "https://api.vivgrid.com/v1"); got != "managed" {
 		t.Fatalf("normalizeModel(vivgrid) = %q, want %q", got, "managed")
 	}
